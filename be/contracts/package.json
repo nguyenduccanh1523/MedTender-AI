@@ -1,0 +1,9 @@
+{
+  "name": "@medtender/contracts",
+  "private": true,
+  "exports": {
+    "./api": {
+      "types": "./src/api.d.ts"
+    }
+  }
+}
