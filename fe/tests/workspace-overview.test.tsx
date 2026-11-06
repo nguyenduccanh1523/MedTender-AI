@@ -15,6 +15,6 @@ it('gives an OWNER governance-focused workspace overview', () => {
 it('gives a VIEWER read-only context without governance action', () => {
   render(<WorkspaceOverview organization={{ id: 'org-1', name: 'Bệnh viện An Tâm', slug: 'an-tam', role: 'VIEWER' }} />)
 
-  expect(screen.getByRole('heading', { name: 'Theo dõi quyết định có căn cứ' })).toBeTruthy()
+  expect(screen.getByRole('heading', { name: 'Theo dõi thông tin được chia sẻ' })).toBeTruthy()
   expect(screen.queryByText('Quản lý thành viên')).toBeNull()
 })

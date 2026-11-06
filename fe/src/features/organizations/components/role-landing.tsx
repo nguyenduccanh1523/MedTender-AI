@@ -1,22 +1,30 @@
+import Link from 'next/link'
+
 import type { Organization } from '../api'
 import { roleLabels } from '../roles'
+import { canCreateTender } from '../workspace-permissions'
 
-type RoleLandingContent = { headline: string; focus: string; primary: string; secondary: string; queue: string }
+type RoleLandingContent = { headline: string; focus: string; secondary: string; permission: string }
 
 const content: Record<Organization['role'], RoleLandingContent> = {
-  OWNER: { headline: 'Điều hành workspace với đầy đủ bối cảnh.', focus: 'Bạn giữ quyền sở hữu, thiết lập thành viên và chuẩn bị nền tảng cho quy trình thầu.', primary: 'Quản trị thành viên', secondary: 'Cấu hình workspace', queue: 'Chưa có công việc cần xử lý' },
-  ADMIN: { headline: 'Giữ đội ngũ phối hợp đúng vai trò.', focus: 'Bạn có thể quản trị thành viên và theo dõi trạng thái vận hành của workspace.', primary: 'Quản trị thành viên', secondary: 'Rà soát phân quyền', queue: 'Workspace đang ổn định' },
-  BID_MANAGER: { headline: 'Chuẩn bị hồ sơ trước khi đi vào đánh giá.', focus: 'Tập trung cấu trúc yêu cầu và điểm quyết định cần phối hợp trong giai đoạn tiếp theo.', primary: 'Theo dõi hồ sơ', secondary: 'Xem nguyên tắc đánh giá', queue: 'Chưa có hồ sơ đang mở' },
-  ANALYST: { headline: 'Bắt đầu từ nguồn bằng chứng đáng tin cậy.', focus: 'Không gian này sẽ tập hợp yêu cầu, catalog và bằng chứng thành ngữ cảnh phân tích thống nhất.', primary: 'Mở phân tích', secondary: 'Tìm hiểu phương pháp', queue: 'Chưa có phân tích chờ bạn' },
-  CATALOG_MANAGER: { headline: 'Giữ catalog sẵn sàng cho mọi quyết định.', focus: 'Bạn sẽ quản lý độ đầy đủ nguồn và chất lượng thông tin thiết bị ở bước catalog.', primary: 'Xem catalog', secondary: 'Chuẩn bị nguồn', queue: 'Chưa có catalog cần bổ sung' },
-  REVIEWER: { headline: 'Rà soát quyết định trước khi được xác nhận.', focus: 'Mọi tiêu chí và bằng chứng sẽ được tập trung tại đây để bạn đánh giá có kiểm soát.', primary: 'Mở hàng chờ', secondary: 'Xem checklist', queue: 'Không có mục cần phê duyệt' },
-  VIEWER: { headline: 'Theo dõi tiến độ với đầy đủ bối cảnh.', focus: 'Bạn có quyền xem những thông tin và bằng chứng mà tổ chức chia sẻ với vai trò của bạn.', primary: 'Xem hoạt động', secondary: 'Tìm hiểu workspace', queue: 'Chế độ chỉ xem đang hoạt động' },
+  OWNER: { headline: 'Điều hành workspace với đầy đủ bối cảnh.', focus: 'Quản lý thành viên và theo dõi hồ sơ mua sắm của tổ chức.', secondary: 'Quản trị đội ngũ', permission: 'Tạo hồ sơ thầu và mời thành viên, bao gồm ADMIN.' },
+  ADMIN: { headline: 'Giữ đội ngũ phối hợp đúng vai trò.', focus: 'Quản lý thành viên nghiệp vụ và hồ sơ mua sắm trong workspace.', secondary: 'Quản trị đội ngũ', permission: 'Tạo hồ sơ thầu và mời các role nghiệp vụ.' },
+  BID_MANAGER: { headline: 'Điều phối hồ sơ mua sắm.', focus: 'Tạo RFQ, E-HSMT hoặc hồ sơ nội bộ và theo dõi danh sách tender.', secondary: 'Xem hoạt động', permission: 'Tạo hồ sơ thầu; không quản trị thành viên.' },
+  ANALYST: { headline: 'Bắt đầu từ hồ sơ nguồn.', focus: 'Xem hồ sơ thầu để chuẩn bị cho quy trình phân tích khi module được triển khai.', secondary: 'Xem hoạt động', permission: 'Xem hồ sơ thầu; chưa có chức năng nhập tài liệu và phân tích.' },
+  CATALOG_MANAGER: { headline: 'Theo dõi nhu cầu từ hồ sơ thầu.', focus: 'Xem hồ sơ mua sắm để chuẩn bị dữ liệu catalog cho giai đoạn tiếp theo.', secondary: 'Xem hoạt động', permission: 'Xem hồ sơ thầu; module catalog chưa được triển khai.' },
+  REVIEWER: { headline: 'Nắm bối cảnh trước khi rà soát.', focus: 'Xem hồ sơ thầu; hàng chờ review sẽ mở khi quy trình phân tích được triển khai.', secondary: 'Xem hoạt động', permission: 'Xem hồ sơ thầu; chưa có thao tác phê duyệt analysis.' },
+  VIEWER: { headline: 'Theo dõi thông tin trong workspace.', focus: 'Xem hồ sơ thầu thuộc tổ chức và các thông tin được chia sẻ.', secondary: 'Xem hoạt động', permission: 'Chỉ xem, không tạo hoặc chỉnh sửa hồ sơ.' },
 }
 
 export function RoleLanding({ organization }: { organization: Organization }) {
   const data = content[organization.role]
+  const canManageTeam = organization.role === 'OWNER' || organization.role === 'ADMIN'
   return <section className="role-landing" aria-label="Trang bắt đầu workspace">
     <div className="role-landing-intro"><div><p className="eyebrow">{roleLabels[organization.role]} · MedTender workspace</p><h2>{data.headline}</h2><p>{data.focus}</p></div><div className="role-access-badge"><span>Quyền hiện tại</span><strong>{roleLabels[organization.role]}</strong></div></div>
-    <div className="role-action-grid"><article className="role-action-primary"><span>Điểm bắt đầu</span><h3>{data.primary}</h3><p>Bước này sẽ được mở rộng khi module nghiệp vụ tương ứng được triển khai.</p><button type="button">Sắp ra mắt <span aria-hidden="true">→</span></button></article><article><span>Tiếp tục khám phá</span><h3>{data.secondary}</h3><p>Hiểu rõ phạm vi vai trò và dữ liệu bạn sẽ làm việc cùng.</p></article><article><span>Trạng thái</span><h3>{data.queue}</h3><p>Thông tin thời gian thực sẽ xuất hiện tại đây khi có dữ liệu nghiệp vụ.</p></article></div>
+    <div className="role-action-grid">
+      <article className="role-action-primary"><span>Điểm bắt đầu</span><h3>{canCreateTender(organization.role) ? 'Quản lý hồ sơ thầu' : 'Xem hồ sơ thầu'}</h3><p>{canCreateTender(organization.role) ? 'Tạo hồ sơ mới hoặc tiếp tục xem các RFQ, E-HSMT đã có.' : 'Đọc danh sách và chi tiết hồ sơ thuộc tổ chức.'}</p><Link href={`/${organization.slug}/tenders`}>Mở hồ sơ thầu <span aria-hidden="true">→</span></Link></article>
+      <article><span>Tiếp tục khám phá</span><h3>{data.secondary}</h3><p>{canManageTeam ? 'Xem thành viên và lời mời của tổ chức.' : 'Theo dõi phần hoạt động hiện có trong workspace.'}</p><Link href={`/${organization.slug}/${canManageTeam ? 'thanh-vien' : 'hoat-dong'}`}>Đi tới <span aria-hidden="true">→</span></Link></article>
+      <article><span>Phạm vi quyền</span><h3>{roleLabels[organization.role]}</h3><p>{data.permission}</p></article>
+    </div>
   </section>
 }

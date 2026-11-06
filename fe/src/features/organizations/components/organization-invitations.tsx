@@ -107,7 +107,9 @@ export function OrganizationInvitations({ slug, role }: { slug: string; role: 'O
           {copyStatus && <p className="muted" role="status">{copyStatus}</p>}
         </div>
       )}
-      {invitations?.length ? (
+      {invitations === undefined ? (
+        <div className="members-skeleton" aria-label="Đang tải lời mời" aria-busy="true"><i /><i /><i /></div>
+      ) : invitations.length ? (
         <ul className="invitation-list" aria-label="Lời mời gần đây">
           {invitations.map((item) => {
             const status = invitationStatus(item)
@@ -126,7 +128,7 @@ export function OrganizationInvitations({ slug, role }: { slug: string; role: 'O
             )
           })}
         </ul>
-      ) : invitations && <p className="muted members-state">Chưa có lời mời.</p>}
+      ) : <p className="muted members-state">Chưa có lời mời.</p>}
     </section>
   )
 }

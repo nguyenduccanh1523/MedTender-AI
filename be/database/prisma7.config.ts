@@ -12,8 +12,19 @@ const databaseUrl = process.env.MEDTENDER_TEST_DATABASE === '1'
   ? localTestDatabaseUrl('TEST_DATABASE_MIGRATION_URL')
   : process.env.DATABASE_MIGRATION_URL || undefined
 
+function useMedTenderSchema(connection: string | undefined) {
+  if (!connection || process.env.MEDTENDER_TEST_DATABASE === '1') return connection
+
+  const url = new URL(connection)
+  // Keep migrations in the same private schema as the runtime connection.
+  // This prevents a direct Supabase URL without `schema` from silently
+  // creating/checking tables in `public`.
+  if (!url.searchParams.has('schema')) url.searchParams.set('schema', 'medtender')
+  return url.toString()
+}
+
 export default defineConfig({
   schema: 'prisma/schema.prisma',
   migrations: { path: 'prisma/migrations' },
-  datasource: { url: databaseUrl },
+  datasource: { url: useMedTenderSchema(databaseUrl) },
 })

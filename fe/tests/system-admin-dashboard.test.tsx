@@ -14,6 +14,9 @@ it('shows an operations approval queue with the approval action', async () => {
   render(<SystemAdminDashboard />)
 
   expect(await screen.findByText('Hàng chờ phê duyệt')).toBeTruthy()
+  expect(screen.getByRole('heading', { name: 'Điều hành đăng ký tổ chức' })).toBeTruthy()
+  expect(screen.getByRole('region', { name: 'Thống kê hồ sơ đăng ký' })).toBeTruthy()
+  expect(screen.getByRole('img', { name: '1 chờ duyệt, 0 đã duyệt, 0 đã từ chối' })).toBeTruthy()
   expect(screen.getByText('Thông tin pháp lý & liên hệ')).toBeTruthy()
   expect(screen.getByRole('button', { name: 'Phê duyệt và cấp OWNER' })).toBeTruthy()
 })

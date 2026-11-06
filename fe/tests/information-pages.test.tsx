@@ -1,9 +1,12 @@
-import { render, screen } from '@testing-library/react'
-import { expect, it } from 'vitest'
+import { cleanup, render, screen, within } from '@testing-library/react'
+import { afterEach, expect, it, vi } from 'vitest'
 
 import GovernancePage from '../src/app/quan-tri/page'
 import PlatformPage from '../src/app/nen-tang/page'
 import WorkflowPage from '../src/app/quy-trinh/page'
+
+vi.mock('next/navigation', () => ({ usePathname: () => '/quan-tri' }))
+afterEach(cleanup)
 
 it('gives the platform page its own evidence-first product overview', () => {
   render(<PlatformPage />)
@@ -20,8 +23,9 @@ it('gives the workflow page its own operational timeline', () => {
 })
 
 it('gives the governance page a dedicated approval model', () => {
-  render(<GovernancePage />)
+  const view = render(<GovernancePage />)
 
-  expect(screen.getByRole('heading', { name: /Quản trị là thiết kế niềm tin/ })).toBeTruthy()
-  expect(screen.getByText('System Admin')).toBeTruthy()
+  expect(screen.getByRole('heading', { name: /Mỗi quyền hạn có một người chịu trách nhiệm/ })).toBeTruthy()
+  expect(screen.getByRole('heading', { name: /Không gian làm việc chỉ mở sau khi hồ sơ được duyệt/ })).toBeTruthy()
+  expect(within(view.container).getByRole('link', { name: 'Quản trị' }).getAttribute('aria-current')).toBe('page')
 })

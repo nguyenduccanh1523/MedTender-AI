@@ -3,16 +3,17 @@
 import { useEffect, useState } from 'react'
 
 import { listOrganizationMembers, type OrganizationMember } from '../api'
+import { loadResource, readResource } from '../../../lib/api/resource-cache'
 import { roleLabels } from '../roles'
 
 export function OrganizationMembers({ slug }: { slug: string }) {
-  const [members, setMembers] = useState<OrganizationMember[]>()
+  const [members, setMembers] = useState<OrganizationMember[] | undefined>(() => readResource(`members:${slug}`))
   const [error, setError] = useState('')
   const [attempt, setAttempt] = useState(0)
 
   useEffect(() => {
     let active = true
-    listOrganizationMembers(slug)
+    loadResource(`members:${slug}`, () => listOrganizationMembers(slug))
       .then((result) => { if (active) setMembers(result) })
       .catch((cause: unknown) => {
         if (active) setError(cause instanceof Error ? cause.message : 'Không tải được danh sách thành viên.')
@@ -36,7 +37,7 @@ export function OrganizationMembers({ slug }: { slug: string }) {
           <button className="button button-secondary" type="button" onClick={retry}>Thử lại</button>
         </div>
       ) : !members ? (
-        <p className="muted members-state" role="status">Đang tải thành viên…</p>
+        <div className="members-skeleton" aria-label="Đang tải" aria-busy="true"><i /><i /><i /></div>
       ) : members.length === 0 ? (
         <p className="muted members-state">Chưa có thành viên để hiển thị.</p>
       ) : (

@@ -9,17 +9,22 @@ import { getCurrentUser, type PublicUser } from '../../auth/api'
 import { readCachedUser } from '../../auth/session-cache'
 import { listOrganizations, type Organization } from '../api'
 import { primeOrganizations } from '../organization-cache'
+import { loadResource, readResource } from '../../../lib/api/resource-cache'
 import { WorkspaceHeader } from './workspace-header'
 
 export function OrganizationPicker() {
-  const [data, setData] = useState<{ user: PublicUser; organizations: Organization[] }>()
+  const [data, setData] = useState<{ user: PublicUser; organizations: Organization[] } | undefined>(() => {
+    const user = readCachedUser()
+    const organizations = readResource<Organization[]>('organizations')
+    return user && organizations ? { user, organizations } : undefined
+  })
   const [failure, setFailure] = useState<ApiError>()
 
   useEffect(() => {
     let active = true
     const cachedUser = readCachedUser()
     const user = cachedUser ? Promise.resolve(cachedUser) : getCurrentUser()
-    Promise.all([user, listOrganizations()])
+    Promise.all([user, loadResource('organizations', listOrganizations)])
       .then(([resolvedUser, organizations]) => {
         primeOrganizations(organizations)
         if (active) setData({ user: resolvedUser, organizations })
@@ -54,7 +59,7 @@ export function OrganizationPicker() {
               <ul className="organization-list">
                 {data.organizations.map((org) => (
                   <li key={org.id}>
-                    <Link href={`/${org.slug}`}><strong>{org.name}</strong><span>{org.role} →</span></Link>
+                    <Link href={`/${org.slug}`} scroll={false} onClick={() => window.scrollTo({ top: 0, left: 0, behavior: 'instant' })}><strong>{org.name}</strong><span>{org.role} →</span></Link>
                   </li>
                 ))}
               </ul>

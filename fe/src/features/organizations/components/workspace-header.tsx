@@ -8,6 +8,7 @@ import { Logo } from '../../../components/brand/logo'
 import { logout } from '../../auth/api'
 import { clearCachedUser } from '../../auth/session-cache'
 import { clearOrganizationCache } from '../organization-cache'
+import { clearResources } from '../../../lib/api/resource-cache'
 
 export function WorkspaceHeader({ label, role }: { label?: string; role?: string }) {
   const router = useRouter()
@@ -21,6 +22,7 @@ export function WorkspaceHeader({ label, role }: { label?: string; role?: string
       await logout()
       clearCachedUser()
       clearOrganizationCache()
+      clearResources()
       router.replace('/login')
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'Không thể đăng xuất.')

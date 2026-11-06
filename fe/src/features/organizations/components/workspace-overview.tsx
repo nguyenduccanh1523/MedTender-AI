@@ -6,11 +6,11 @@ type Overview = { title: string; copy: string; action: string; signal: string; g
 const overviewByRole: Record<Organization['role'], Overview> = {
   OWNER: { title: 'Toàn quyền điều phối workspace', copy: 'Thiết lập đội ngũ, phân vai và giữ luồng ra quyết định nhất quán cho tổ chức.', action: 'Quản lý thành viên', signal: 'Workspace đã sẵn sàng', governance: true },
   ADMIN: { title: 'Điều phối đội ngũ mua sắm', copy: 'Duy trì quyền truy cập và hỗ trợ các nhóm làm việc đúng vai trò.', action: 'Quản lý thành viên', signal: 'Quyền quản trị đang hoạt động', governance: true },
-  BID_MANAGER: { title: 'Sẵn sàng điều phối hồ sơ thầu', copy: 'Tập trung vào độ rõ ràng của yêu cầu, tiến độ phân tích và quyết định liên phòng ban.', action: 'Xem lộ trình hồ sơ', signal: 'Không có hồ sơ mới trong bản demo' },
-  ANALYST: { title: 'Bắt đầu từ bằng chứng nguồn', copy: 'Chuẩn bị đối chiếu yêu cầu, tài liệu kỹ thuật và dữ liệu catalog trong cùng một ngữ cảnh.', action: 'Mở không gian phân tích', signal: 'Không có phân tích đang chờ' },
-  CATALOG_MANAGER: { title: 'Giữ catalog sẵn sàng đối chiếu', copy: 'Theo dõi chất lượng nguồn và độ đầy đủ dữ liệu trước khi catalog đi vào đánh giá.', action: 'Xem sức khoẻ catalog', signal: 'Catalog sẽ xuất hiện ở bước tiếp theo' },
-  REVIEWER: { title: 'Rà soát quyết định có kiểm soát', copy: 'Tập trung vào tiêu chí tuân thủ, bằng chứng và các điểm cần phê duyệt.', action: 'Xem hàng chờ rà soát', signal: 'Không có mục cần duyệt' },
-  VIEWER: { title: 'Theo dõi quyết định có căn cứ', copy: 'Bạn có quyền xem bối cảnh, tiến độ và bằng chứng đã được chia sẻ trong tổ chức.', action: 'Xem hoạt động workspace', signal: 'Chế độ chỉ xem' },
+  BID_MANAGER: { title: 'Sẵn sàng điều phối hồ sơ thầu', copy: 'Tạo hồ sơ mua sắm và theo dõi các tender trong tổ chức.', action: 'Quản lý hồ sơ thầu', signal: 'Quyền tạo hồ sơ đang hoạt động' },
+  ANALYST: { title: 'Bắt đầu từ hồ sơ nguồn', copy: 'Xem tender hiện có để chuẩn bị cho luồng phân tích ở bước tiếp theo.', action: 'Xem hồ sơ thầu', signal: 'Quyền xem đang hoạt động' },
+  CATALOG_MANAGER: { title: 'Theo dõi nhu cầu từ hồ sơ', copy: 'Xem tender trong tổ chức; quản lý catalog sẽ được triển khai ở module tiếp theo.', action: 'Xem hồ sơ thầu', signal: 'Quyền xem đang hoạt động' },
+  REVIEWER: { title: 'Nắm bối cảnh trước khi review', copy: 'Xem hồ sơ thầu; quyết định review chỉ mở khi có module analysis và bằng chứng.', action: 'Xem hồ sơ thầu', signal: 'Quyền xem đang hoạt động' },
+  VIEWER: { title: 'Theo dõi thông tin được chia sẻ', copy: 'Bạn có thể đọc hồ sơ thầu thuộc tổ chức theo quyền hiện tại.', action: 'Xem hồ sơ thầu', signal: 'Chế độ chỉ xem' },
 }
 
 export function WorkspaceOverview({ organization }: { organization: Organization }) {

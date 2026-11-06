@@ -3,7 +3,7 @@ import { ConflictException, ForbiddenException, Injectable } from '@nestjs/commo
 
 import { DatabaseService } from '../../../database/database.service'
 import { Prisma, type MembershipRole } from '../../../database/generated/client'
-import { setTenantUserContext, TenantAccessDeniedError, withTenantTransaction } from '../../../database/tenant-transaction'
+import { setTenantUserContext, TenantAccessDeniedError, withTenantWorkspaceTransaction } from '../../../database/tenant-transaction'
 
 const orgFields = { id: true, slug: true, name: true } as const
 
@@ -75,15 +75,9 @@ export class OrganizationsService {
     operation: (tx: Prisma.TransactionClient, id: string, role: MembershipRole) => Promise<T>,
   ): Promise<T> {
     const db = this.database.db
-    const org = await db.$transaction(async (tx) => {
-      await setTenantUserContext(tx, userId)
-      return tx.organization.findUnique({ where: { slug }, select: { id: true } })
-    })
-    if (!org) throw new ForbiddenException('Bạn không có quyền truy cập tổ chức này.')
-
     try {
-      return await withTenantTransaction(db, { userId, organizationId: org.id },
-        (tx, role) => operation(tx, org.id, role))
+      return await withTenantWorkspaceTransaction(db, { userId, slug },
+        (tx, organizationId, role) => operation(tx, organizationId, role))
     } catch (error) {
       if (error instanceof TenantAccessDeniedError) {
         throw new ForbiddenException('Bạn không có quyền truy cập tổ chức này.')

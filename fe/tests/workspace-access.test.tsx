@@ -1,7 +1,8 @@
-import { cleanup, render, screen } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, expect, it, vi } from 'vitest'
 
 import { WorkspaceAccess } from '../src/features/organizations/components/workspace-access'
+import { clearOrganizationCache } from '../src/features/organizations/organization-cache'
 
 const { getOrganization, listOrganizationMembers } = vi.hoisted(() => ({
   getOrganization: vi.fn(),
@@ -15,6 +16,7 @@ vi.mock('next/navigation', () => ({ usePathname: () => '/org-a' }))
 
 afterEach(() => {
   cleanup()
+  clearOrganizationCache()
   vi.resetAllMocks()
 })
 
@@ -35,6 +37,16 @@ it('opens the workspace for a reviewer without requesting the private member lis
   expect(await screen.findByText('Nội dung workspace')).toBeTruthy()
   expect(screen.queryByRole('heading', { name: 'Thành viên tổ chức' })).toBeNull()
   expect(listOrganizationMembers).not.toHaveBeenCalled()
+  expect(screen.queryByRole('link', { name: 'Quản trị đội ngũ' })).toBeNull()
+})
+
+it('does not render team page content when a viewer opens its URL directly', async () => {
+  getOrganization.mockResolvedValue({ id: 'org-a', slug: 'org-a', name: 'Tổ chức A', role: 'VIEWER' })
+  render(<WorkspaceAccess slug="org-a" section="team"><p>Nội dung riêng của trang thành viên</p></WorkspaceAccess>)
+
+  expect(await screen.findByText('Bạn không có quyền quản trị đội ngũ')).toBeTruthy()
+  expect(screen.queryByText('Nội dung riêng của trang thành viên')).toBeNull()
+  expect(listOrganizationMembers).not.toHaveBeenCalled()
 })
 
 it('uses separate workspace routes instead of page anchors', async () => {
@@ -44,4 +56,16 @@ it('uses separate workspace routes instead of page anchors', async () => {
   expect((await screen.findByRole('link', { name: 'Tổng quan' })).getAttribute('href')).toBe('/org-a')
   expect(screen.getByRole('link', { name: 'Hoạt động' }).getAttribute('href')).toBe('/org-a/hoat-dong')
   expect(screen.getByRole('link', { name: 'Quản trị đội ngũ' }).getAttribute('href')).toBe('/org-a/thanh-vien')
+})
+
+it('collapses and reopens the sidebar while keeping navigation accessible', async () => {
+  getOrganization.mockResolvedValue({ id: 'org-a', slug: 'org-a', name: 'Tổ chức A', role: 'OWNER' })
+  render(<WorkspaceAccess slug="org-a"><p>Nội dung workspace</p></WorkspaceAccess>)
+
+  fireEvent.click(await screen.findByRole('button', { name: 'Thu gọn menu bên trái' }))
+  expect(document.querySelector('.workspace-app-shell')?.classList.contains('is-sidebar-collapsed')).toBe(true)
+  expect(screen.getByRole('link', { name: 'Hồ sơ thầu' })).toBeTruthy()
+
+  fireEvent.click(screen.getByRole('button', { name: 'Mở menu bên trái' }))
+  expect(document.querySelector('.workspace-app-shell')?.classList.contains('is-sidebar-collapsed')).toBe(false)
 })

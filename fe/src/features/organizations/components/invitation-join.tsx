@@ -68,7 +68,7 @@ export function InvitationJoin() {
   }
 
   if (token === undefined || (valid && user === undefined)) {
-    return <p className="muted" role="status">Đang mở lời mời…</p>
+    return <div className="members-skeleton" aria-label="Đang tải lời mời" aria-busy="true"><i /><i /><i /></div>
   }
 
   if (!valid) return (
