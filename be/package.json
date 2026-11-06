@@ -50,7 +50,8 @@
     "infra:down": "docker compose --env-file ../.env -f infra/compose.dev.yaml --profile db-test down",
     "infra:test-db:up": "docker compose --env-file ../.env -f infra/compose.dev.yaml up -d --wait postgres",
     "db:test:deploy": "cd database && MEDTENDER_TEST_DATABASE=1 prisma migrate deploy",
-    "admin:bootstrap": "cd api && node --env-file=../../.env -r ts-node/register src/scripts/bootstrap-system-admin.ts"
+    "admin:bootstrap": "cd api && node --env-file=../../.env -r ts-node/register src/scripts/bootstrap-system-admin.ts",
+    "demo:seed": "cd api && node --env-file=../../.env -r ts-node/register src/scripts/demo-seed.ts"
   },
   "dependencies": {
     "@nestjs/common": "^11",

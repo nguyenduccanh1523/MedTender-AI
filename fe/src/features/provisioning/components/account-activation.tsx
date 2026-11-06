@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation'
 import { useState, useSyncExternalStore, type FormEvent } from 'react'
 
 import { activateAccount } from '../api'
+import { saveCachedUser } from '../../auth/session-cache'
 
 const subscribe = (listener: () => void) => { window.addEventListener('hashchange', listener); return () => window.removeEventListener('hashchange', listener) }
 const clientToken = () => window.location.hash.slice(1)
@@ -21,7 +22,7 @@ export function AccountActivation() {
     if (!valid || pending) return
     const password = String(new FormData(event.currentTarget).get('password') ?? '')
     setPending(true); setError('')
-    try { await activateAccount(token, password); router.replace('/organizations') }
+    try { saveCachedUser(await activateAccount(token, password)); router.replace('/organizations') }
     catch (cause) { setError(cause instanceof Error ? cause.message : 'Không kích hoạt được tài khoản.'); setPending(false) }
   }
 

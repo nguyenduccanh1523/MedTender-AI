@@ -11,5 +11,6 @@ import { OrganizationsService } from './application/organizations.service'
   imports: [DatabaseModule, IdentityModule],
   controllers: [OrganizationsController, InvitationsController],
   providers: [OrganizationsService, InvitationsService],
+  exports: [OrganizationsService],
 })
 export class OrganizationsModule {}

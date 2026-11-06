@@ -1,0 +1,5 @@
+'use client'
+import Link from 'next/link'
+import { useEffect, useState } from 'react'
+import { listTenders, type Tender } from '../api'
+export function TenderList({ slug }: { slug: string }) { const [items, setItems] = useState<Tender[]>(); const [error, setError] = useState(''); useEffect(() => { listTenders(slug).then(setItems).catch((cause: Error) => setError(cause.message)) }, [slug]); if (error) return <p className="notice notice-error">{error}</p>; if (!items) return <div className="loading-skeleton" aria-label="Đang tải" />; return <section className="surface"><div className="section-heading"><div><p className="eyebrow">Tender</p><h2>Hồ sơ mua sắm</h2></div><Link className="button button-primary" href={`/${slug}/tenders/new`}>Tạo hồ sơ</Link></div>{items.length === 0 ? <p className="muted empty-state">Chưa có hồ sơ. Tạo RFQ, E-HSMT hoặc hồ sơ nội bộ đầu tiên.</p> : <ul className="organization-list">{items.map((item) => <li key={item.id}><Link href={`/${slug}/tenders/${item.id}`}><strong>{item.title}</strong><span>{item.procurementStage} · {item._count?.lots ?? 0} lot →</span></Link></li>)}</ul>}</section> }

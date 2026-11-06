@@ -7,6 +7,7 @@ import './globals.css'
 export const metadata: Metadata = {
   title: 'MedTender AI',
   description: 'Hỗ trợ đối chiếu yêu cầu kỹ thuật và bằng chứng trong hồ sơ thầu thiết bị y tế.',
+  icons: { icon: '/icon.svg' },
 }
 
 export default function RootLayout({ children }: { children: ReactNode }) {

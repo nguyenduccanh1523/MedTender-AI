@@ -15,6 +15,14 @@ export class DatabaseService implements OnModuleDestroy {
     }
   }
 
+  async prewarm() {
+    try {
+      await this.db.$queryRawUnsafe('SELECT 1')
+    } catch {
+      // The first user request can still retry normally if a remote pooler is briefly unavailable.
+    }
+  }
+
   async onModuleDestroy() {
     await this.client?.$disconnect()
   }

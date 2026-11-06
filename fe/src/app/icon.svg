@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="MedTender AI">
+  <defs>
+    <linearGradient id="brand" x1="8" y1="8" x2="56" y2="56" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#0A3B70"/>
+      <stop offset="1" stop-color="#22D4C4"/>
+    </linearGradient>
+  </defs>
+  <rect width="64" height="64" rx="17" fill="#06213B"/>
+  <path fill="url(#brand)" d="M25 10c0-4 3-7 7-7s7 3 7 7v8h8c4 0 7 3 7 7s-3 7-7 7h-8v8c0 4-3 7-7 7s-7-3-7-7v-8h-8c-4 0-7-3-7-7s3-7 7-7h8z"/>
+  <circle cx="32" cy="32" r="13" fill="#F4FFFF"/>
+  <path d="m25.5 32.5 4.3 4.3 8.8-9" fill="none" stroke="#078C8B" stroke-linecap="round" stroke-linejoin="round" stroke-width="4"/>
+</svg>

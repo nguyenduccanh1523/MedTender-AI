@@ -2,9 +2,10 @@
 
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { useState, useSyncExternalStore, type FormEvent } from 'react'
+import { useEffect, useState, useSyncExternalStore, type FormEvent } from 'react'
 
 import { submitAuth, type PublicUser } from '../api'
+import { saveCachedUser } from '../session-cache'
 
 const subscribeToHydration = () => () => {}
 const clientReady = () => true
@@ -23,6 +24,11 @@ export function AuthForm({ mode, onAuthenticated, onSwitchMode }: AuthFormProps)
   const [pending, setPending] = useState(false)
   const [error, setError] = useState('')
 
+  useEffect(() => {
+    router.prefetch('/organizations')
+    router.prefetch('/system-admin/organization-requests')
+  }, [router])
+
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     if (!ready || pending) return
@@ -32,6 +38,7 @@ export function AuthForm({ mode, onAuthenticated, onSwitchMode }: AuthFormProps)
     setError('')
     try {
       const user = await submitAuth(mode, registering ? { ...credentials, name: String(fields.get('name') ?? '') } : credentials)
+      saveCachedUser(user)
       if (onAuthenticated) onAuthenticated(user)
       else router.replace(user.systemRole === 'SYSTEM_ADMIN' ? '/system-admin/organization-requests' : '/organizations')
     } catch (cause) {

@@ -6,8 +6,10 @@ import { useState } from 'react'
 
 import { Logo } from '../../../components/brand/logo'
 import { logout } from '../../auth/api'
+import { clearCachedUser } from '../../auth/session-cache'
+import { clearOrganizationCache } from '../organization-cache'
 
-export function WorkspaceHeader({ label }: { label?: string }) {
+export function WorkspaceHeader({ label, role }: { label?: string; role?: string }) {
   const router = useRouter()
   const [pending, setPending] = useState(false)
   const [error, setError] = useState('')
@@ -17,6 +19,8 @@ export function WorkspaceHeader({ label }: { label?: string }) {
     setError('')
     try {
       await logout()
+      clearCachedUser()
+      clearOrganizationCache()
       router.replace('/login')
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'Không thể đăng xuất.')
@@ -25,10 +29,11 @@ export function WorkspaceHeader({ label }: { label?: string }) {
   }
 
   return (
-    <header className="app-header">
-      <div className="app-header-row">
+    <header className="workspace-header">
+      <div className="workspace-header-row">
         <Logo />
-        <nav aria-label="Không gian làm việc">
+        <nav aria-label="Không gian làm việc" className="workspace-header-nav">
+          {label && <span className="workspace-org-chip"><b>{label}</b>{role && <small>{role}</small>}</span>}
           {label && <Link href="/organizations">Đổi tổ chức</Link>}
           <button type="button" className="button button-secondary" onClick={signOut} disabled={pending}>
             {pending ? 'Đang đăng xuất…' : 'Đăng xuất'}

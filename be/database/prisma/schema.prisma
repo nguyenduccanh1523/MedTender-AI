@@ -49,6 +49,14 @@ enum OrganizationApplicationStatus {
   @@map("organization_application_status")
 }
 
+enum ProcurementStage {
+  RFQ
+  FORMAL_TENDER
+  INTERNAL
+
+  @@map("procurement_stage")
+}
+
 model User {
   id           String                   @id @default(uuid()) @db.Uuid
   email        String                   @unique @db.Citext
@@ -79,8 +87,58 @@ model Organization {
   application OrganizationApplication?
   createdByUserId String? @map("created_by_user_id") @db.Uuid
   createdBy User? @relation("OrganizationCreator", fields: [createdByUserId], references: [id], onDelete: SetNull)
+  tenders Tender[]
 
   @@map("organizations")
+}
+
+model Tender {
+  id String @id @default(uuid()) @db.Uuid
+  organizationId String @map("organization_id") @db.Uuid
+  title String
+  reference String?
+  procurementStage ProcurementStage @map("procurement_stage")
+  createdByUserId String @map("created_by_user_id") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  lots TenderLot[]
+
+  @@index([organizationId, createdAt, id])
+  @@map("tenders")
+}
+
+model TenderLot {
+  id String @id @default(uuid()) @db.Uuid
+  organizationId String @map("organization_id") @db.Uuid
+  tenderId String @map("tender_id") @db.Uuid
+  code String @map("lot_code")
+  name String
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  tender Tender @relation(fields: [tenderId], references: [id], onDelete: Cascade)
+  items TenderItem[]
+
+  @@unique([tenderId, code])
+  @@unique([id, organizationId])
+  @@index([organizationId, tenderId])
+  @@map("tender_lots")
+}
+
+model TenderItem {
+  id String @id @default(uuid()) @db.Uuid
+  organizationId String @map("organization_id") @db.Uuid
+  lotId String @map("lot_id") @db.Uuid
+  itemNo String @map("item_no")
+  name String
+  quantity Decimal @db.Decimal(14, 3)
+  unit String
+  description String?
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  lot TenderLot @relation(fields: [lotId], references: [id], onDelete: Cascade)
+
+  @@unique([lotId, itemNo])
+  @@index([organizationId, lotId])
+  @@map("tender_items")
 }
 
 model OrganizationApplication {

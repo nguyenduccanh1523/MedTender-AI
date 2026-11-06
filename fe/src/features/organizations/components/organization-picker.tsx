@@ -4,8 +4,11 @@ import Link from 'next/link'
 import { useEffect, useState } from 'react'
 
 import { ApiError } from '../../../lib/api/client'
+import { LoadingSkeleton } from '../../../components/ui/loading-skeleton'
 import { getCurrentUser, type PublicUser } from '../../auth/api'
+import { readCachedUser } from '../../auth/session-cache'
 import { listOrganizations, type Organization } from '../api'
+import { primeOrganizations } from '../organization-cache'
 import { WorkspaceHeader } from './workspace-header'
 
 export function OrganizationPicker() {
@@ -14,8 +17,13 @@ export function OrganizationPicker() {
 
   useEffect(() => {
     let active = true
-    Promise.all([getCurrentUser(), listOrganizations()])
-      .then(([user, organizations]) => { if (active) setData({ user, organizations }) })
+    const cachedUser = readCachedUser()
+    const user = cachedUser ? Promise.resolve(cachedUser) : getCurrentUser()
+    Promise.all([user, listOrganizations()])
+      .then(([resolvedUser, organizations]) => {
+        primeOrganizations(organizations)
+        if (active) setData({ user: resolvedUser, organizations })
+      })
       .catch((error: ApiError) => { if (active) setFailure(error) })
     return () => { active = false }
   }, [])
@@ -28,7 +36,7 @@ export function OrganizationPicker() {
     </main>
   )
 
-  if (!data) return <main className="center-panel"><p role="status">Đang tải tổ chức…</p></main>
+  if (!data) return <LoadingSkeleton />
 
   return (
     <>

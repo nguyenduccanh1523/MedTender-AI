@@ -3,13 +3,14 @@ import { afterEach, expect, it, vi } from 'vitest'
 
 import { AuthForm } from '../src/features/auth/components/auth-form'
 
-const { replace } = vi.hoisted(() => ({ replace: vi.fn() }))
-vi.mock('next/navigation', () => ({ useRouter: () => ({ replace }) }))
+const { replace, prefetch } = vi.hoisted(() => ({ replace: vi.fn(), prefetch: vi.fn() }))
+vi.mock('next/navigation', () => ({ useRouter: () => ({ replace, prefetch }) }))
 
 afterEach(() => {
   cleanup()
   vi.unstubAllGlobals()
   replace.mockClear()
+  prefetch.mockClear()
 })
 
 it('shows a login error and allows the user to submit again', async () => {
@@ -29,4 +30,10 @@ it('shows a login error and allows the user to submit again', async () => {
   fireEvent.click(screen.getByRole('button', { name: 'Đăng nhập' }))
   await waitFor(() => expect(replace).toHaveBeenCalledWith('/organizations'))
   expect(fetcher).toHaveBeenCalledTimes(2)
+})
+
+it('prefetches the next workspace routes after hydration', async () => {
+  render(<AuthForm mode="login" />)
+  await waitFor(() => expect(prefetch).toHaveBeenCalledWith('/organizations'))
+  expect(prefetch).toHaveBeenCalledWith('/system-admin/organization-requests')
 })
