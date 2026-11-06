@@ -22,6 +22,38 @@ export class ActivateAccountDto {
   @ApiProperty({ minLength: 12, maxLength: 128 }) password!: string
 }
 
+export class UpdateProfileDto {
+  @ApiProperty({ minLength: 2, maxLength: 100 }) name!: string
+}
+
+export class ChangePasswordDto {
+  @ApiProperty({ maxLength: 128 }) currentPassword!: string
+  @ApiProperty({ minLength: 12, maxLength: 128 }) newPassword!: string
+}
+
+export function updateProfileInput(body?: Partial<UpdateProfileDto>): UpdateProfileDto {
+  const name = typeof body?.name === 'string' ? body.name.trim() : ''
+  if (name.length < 2 || name.length > 100) {
+    throw new BadRequestException('Họ tên hiển thị cần từ 2 đến 100 ký tự.')
+  }
+  return { name }
+}
+
+export function changePasswordInput(body?: Partial<ChangePasswordDto>): ChangePasswordDto {
+  const currentPassword = typeof body?.currentPassword === 'string' ? body.currentPassword : ''
+  const newPassword = typeof body?.newPassword === 'string' ? body.newPassword : ''
+  if (!currentPassword || currentPassword.length > 128) {
+    throw new BadRequestException('Vui lòng nhập mật khẩu hiện tại.')
+  }
+  if (newPassword.length < 12 || newPassword.length > 128) {
+    throw new BadRequestException('Mật khẩu mới cần từ 12 đến 128 ký tự.')
+  }
+  if (currentPassword === newPassword) {
+    throw new BadRequestException('Mật khẩu mới cần khác mật khẩu hiện tại.')
+  }
+  return { currentPassword, newPassword }
+}
+
 export function activationInput(body?: Partial<ActivateAccountDto>): ActivateAccountDto {
   if (typeof body?.token !== 'string' || typeof body.password !== 'string') {
     throw new BadRequestException('Thông tin kích hoạt không hợp lệ.')

@@ -116,6 +116,38 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/auth/profile": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch: operations["IdentityController_updateProfile"];
+        trace?: never;
+    };
+    "/api/v1/auth/change-password": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["IdentityController_changePassword"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/organizations": {
         parameters: {
             query?: never;
@@ -162,6 +194,54 @@ export interface paths {
         options?: never;
         head?: never;
         patch?: never;
+        trace?: never;
+    };
+    "/api/v1/organizations/{slug}/activity": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["OrganizationsController_activity"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/organizations/{slug}/governance": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["OrganizationsController_governance"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch: operations["OrganizationsController_updateGovernance"];
+        trace?: never;
+    };
+    "/api/v1/organizations/{slug}/members/{memberUserId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch: operations["OrganizationsController_updateMember"];
         trace?: never;
     };
     "/api/v1/organizations/{slug}/invitations": {
@@ -276,6 +356,246 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/organizations/{slug}/tenders": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["TendersController_list"];
+        put?: never;
+        post: operations["TendersController_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/organizations/{slug}/tenders/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["TendersController_detail"];
+        put?: never;
+        post?: never;
+        delete: operations["TendersController_remove"];
+        options?: never;
+        head?: never;
+        patch: operations["TendersController_update"];
+        trace?: never;
+    };
+    "/api/v1/organizations/{slug}/tenders/{id}/lots": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["TendersController_lot"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/organizations/{slug}/tenders/{id}/lots/{lotId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete: operations["TendersController_removeLot"];
+        options?: never;
+        head?: never;
+        patch: operations["TendersController_updateLot"];
+        trace?: never;
+    };
+    "/api/v1/organizations/{slug}/tenders/{id}/lots/{lotId}/items": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["TendersController_item"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/organizations/{slug}/tenders/{id}/lots/{lotId}/items/{itemId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete: operations["TendersController_removeItem"];
+        options?: never;
+        head?: never;
+        patch: operations["TendersController_updateItem"];
+        trace?: never;
+    };
+    "/api/v1/organizations/{slug}/tenders/{id}/audits": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["TendersController_audits"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/organizations/{slug}/catalog/products": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["CatalogController_list"];
+        put?: never;
+        post: operations["CatalogController_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/organizations/{slug}/catalog/products/{productId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["CatalogController_detail"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch: operations["CatalogController_update"];
+        trace?: never;
+    };
+    "/api/v1/organizations/{slug}/catalog/versions/{versionId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["CatalogController_getVersionById"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/organizations/{slug}/catalog/products/{productId}/versions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["CatalogController_createVersion"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/organizations/{slug}/catalog/products/{productId}/versions/{versionId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["CatalogController_getProductVersion"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch: operations["CatalogController_updateVersion"];
+        trace?: never;
+    };
+    "/api/v1/organizations/{slug}/catalog/products/{productId}/versions/{versionId}/publish": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["CatalogController_publishVersion"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/organizations/{slug}/catalog/products/{productId}/versions/{versionId}/specifications": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["CatalogController_addSpecification"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/organizations/{slug}/catalog/products/{productId}/versions/{versionId}/specifications/{specId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete: operations["CatalogController_removeSpecification"];
+        options?: never;
+        head?: never;
+        patch: operations["CatalogController_updateSpecification"];
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -312,6 +632,13 @@ export interface components {
             token: string;
             password: string;
         };
+        UpdateProfileDto: {
+            name: string;
+        };
+        ChangePasswordDto: {
+            currentPassword: string;
+            newPassword: string;
+        };
         OrganizationDto: {
             /** Format: uuid */
             id: string;
@@ -328,6 +655,78 @@ export interface components {
             role: "OWNER" | "ADMIN" | "BID_MANAGER" | "ANALYST" | "CATALOG_MANAGER" | "REVIEWER" | "VIEWER";
             /** @enum {string} */
             status: "ACTIVE" | "DISABLED";
+        };
+        WorkspaceActivityMetricsDto: {
+            tendersCount: number;
+            lotsCount: number;
+            itemsCount: number;
+            productsCount: number;
+            publishedVersionsCount: number;
+            draftVersionsCount: number;
+            conflictingSpecsCount: number;
+            membersCount: number | null;
+            pendingInvitationsCount: number | null;
+        };
+        WorkspaceWorkQueueItemDto: {
+            id: string;
+            category: string;
+            /** @enum {string} */
+            priority: "HIGH" | "MEDIUM" | "INFO";
+            title: string;
+            description: string;
+            href: string;
+            ctaLabel: string;
+            meta: string;
+        };
+        WorkspaceTimelineItemDto: {
+            id: string;
+            action: string;
+            summary: string;
+            actorName: string;
+            /** @enum {string} */
+            actorRole: "OWNER" | "ADMIN" | "BID_MANAGER" | "ANALYST" | "CATALOG_MANAGER" | "REVIEWER" | "VIEWER";
+            /** Format: date-time */
+            createdAt: string;
+            href: string | null;
+        };
+        WorkspaceActivityDto: {
+            /** @enum {string} */
+            role: "OWNER" | "ADMIN" | "BID_MANAGER" | "ANALYST" | "CATALOG_MANAGER" | "REVIEWER" | "VIEWER";
+            metrics: components["schemas"]["WorkspaceActivityMetricsDto"];
+            workQueue: components["schemas"]["WorkspaceWorkQueueItemDto"][];
+            timeline: components["schemas"]["WorkspaceTimelineItemDto"][];
+        };
+        OrganizationGovernanceSettingsDto: {
+            requireIndependentReviewer: boolean;
+            externalAiPolicy: string;
+            /** @enum {string} */
+            defaultDataClassification: "INTERNAL" | "CONFIDENTIAL" | "RESTRICTED";
+            maxLotsPerTender: number;
+            maxItemsPerTender: number;
+            maxSpecsPerVersion: number;
+        };
+        OrganizationGovernanceDto: {
+            id: string;
+            slug: string;
+            name: string;
+            status: string;
+            /** Format: date-time */
+            createdAt: string;
+            settings: components["schemas"]["OrganizationGovernanceSettingsDto"];
+            members: components["schemas"]["OrganizationMemberDto"][];
+            recentAudits: components["schemas"]["WorkspaceTimelineItemDto"][];
+        };
+        UpdateOrganizationGovernanceDto: {
+            name?: string;
+            requireIndependentReviewer?: boolean;
+            /** @enum {string} */
+            defaultDataClassification?: "INTERNAL" | "CONFIDENTIAL" | "RESTRICTED";
+        };
+        UpdateOrganizationMemberDto: {
+            /** @enum {string} */
+            role?: "OWNER" | "ADMIN" | "BID_MANAGER" | "ANALYST" | "CATALOG_MANAGER" | "REVIEWER" | "VIEWER";
+            /** @enum {string} */
+            status?: "ACTIVE" | "DISABLED";
         };
         InvitationDto: {
             /** Format: uuid */
@@ -409,6 +808,207 @@ export interface components {
         };
         RejectApplicationDto: {
             reason: string;
+        };
+        CreateTenderDto: {
+            title: string;
+            /** @enum {string} */
+            procurementStage: "RFQ" | "FORMAL_TENDER" | "INTERNAL";
+            reference?: string;
+        };
+        TenderCountDto: {
+            lots: number;
+            items?: number;
+        };
+        TenderDto: {
+            id: string;
+            organizationId: string;
+            title: string;
+            reference: Record<string, never> | null;
+            /** @enum {string} */
+            procurementStage: "RFQ" | "FORMAL_TENDER" | "INTERNAL";
+            createdByUserId: string;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+            _count?: components["schemas"]["TenderCountDto"];
+        };
+        UpdateTenderDto: {
+            title?: string;
+            /** @enum {string} */
+            procurementStage?: "RFQ" | "FORMAL_TENDER" | "INTERNAL";
+            reference?: Record<string, never> | null;
+        };
+        CreateLotDto: {
+            code: string;
+            name: string;
+        };
+        UpdateLotDto: {
+            code?: string;
+            name?: string;
+        };
+        CreateItemDto: {
+            itemNo: string;
+            name: string;
+            quantity: number;
+            unit: string;
+            description?: string;
+        };
+        UpdateItemDto: {
+            itemNo?: string;
+            name?: string;
+            quantity?: number;
+            unit?: string;
+            description?: Record<string, never> | null;
+        };
+        TenderAuditLogDto: {
+            id: string;
+            tenderId: Record<string, never> | null;
+            lotId: Record<string, never> | null;
+            itemId: Record<string, never> | null;
+            actorUserId: string;
+            actorName: string;
+            /** @enum {string} */
+            actorRole: "OWNER" | "ADMIN" | "BID_MANAGER" | "ANALYST" | "CATALOG_MANAGER" | "REVIEWER" | "VIEWER";
+            action: string;
+            summary: string;
+            details: Record<string, never>;
+            /** Format: date-time */
+            createdAt: string;
+        };
+        ProductVersionSummaryDto: {
+            id: string;
+            productId: string;
+            versionNumber: number;
+            versionLabel: string;
+            modelCode: string;
+            /** @enum {string} */
+            status: "DRAFT" | "PUBLISHED" | "SUPERSEDED";
+            fingerprint: string;
+            notes: string | null;
+            /** Format: date-time */
+            publishedAt: string | null;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+            specificationCount: number;
+            conflictCount: number;
+        };
+        ProductSummaryDto: {
+            id: string;
+            organizationId: string;
+            sku: string;
+            name: string;
+            brand: string;
+            manufacturer: string | null;
+            category: string | null;
+            /** @enum {string} */
+            status: "ACTIVE" | "ARCHIVED";
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+            versionCount: number;
+            latestVersion: components["schemas"]["ProductVersionSummaryDto"] | null;
+            publishedVersion: components["schemas"]["ProductVersionSummaryDto"] | null;
+        };
+        CreateProductSpecDto: {
+            specKey: string;
+            specValue: string;
+            unit?: string | null;
+            sourceLabel: string;
+            sourceQuote?: string | null;
+            documentVersionId?: string | null;
+        };
+        CreateProductDto: {
+            sku: string;
+            name: string;
+            brand: string;
+            manufacturer?: string;
+            category?: string;
+            modelCode?: string;
+            notes?: string;
+            specifications?: components["schemas"]["CreateProductSpecDto"][];
+        };
+        ProductSpecificationDto: {
+            id: string;
+            productVersionId: string;
+            specKey: string;
+            specValue: string;
+            unit: string | null;
+            sourceLabel: string;
+            sourceQuote: string | null;
+            documentVersionId: string | null;
+            hasConflict: boolean;
+            /** Format: date-time */
+            createdAt: string;
+        };
+        ProductVersionDetailDto: {
+            id: string;
+            productId: string;
+            versionNumber: number;
+            versionLabel: string;
+            modelCode: string;
+            /** @enum {string} */
+            status: "DRAFT" | "PUBLISHED" | "SUPERSEDED";
+            fingerprint: string;
+            notes: string | null;
+            /** Format: date-time */
+            publishedAt: string | null;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+            specificationCount: number;
+            conflictCount: number;
+            specifications: components["schemas"]["ProductSpecificationDto"][];
+        };
+        ProductDetailDto: {
+            id: string;
+            organizationId: string;
+            sku: string;
+            name: string;
+            brand: string;
+            manufacturer: string | null;
+            category: string | null;
+            /** @enum {string} */
+            status: "ACTIVE" | "ARCHIVED";
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+            versionCount: number;
+            latestVersion: components["schemas"]["ProductVersionSummaryDto"] | null;
+            publishedVersion: components["schemas"]["ProductVersionSummaryDto"] | null;
+            versions: components["schemas"]["ProductVersionDetailDto"][];
+        };
+        UpdateProductDto: {
+            sku?: string;
+            name?: string;
+            brand?: string;
+            manufacturer?: string | null;
+            category?: string | null;
+            /** @enum {string} */
+            status?: "ACTIVE" | "ARCHIVED";
+        };
+        CreateProductVersionDto: {
+            modelCode: string;
+            versionLabel?: string;
+            notes?: string;
+            cloneFromVersionId?: string;
+            specifications?: components["schemas"]["CreateProductSpecDto"][];
+        };
+        UpdateProductVersionDto: {
+            modelCode?: string;
+            notes?: string | null;
+        };
+        UpdateProductSpecDto: {
+            specKey?: string;
+            specValue?: string;
+            unit?: string | null;
+            sourceLabel?: string;
+            sourceQuote?: string | null;
         };
     };
     responses: never;
@@ -562,6 +1162,50 @@ export interface operations {
             };
         };
     };
+    IdentityController_updateProfile: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateProfileDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PublicUser"];
+                };
+            };
+        };
+    };
+    IdentityController_changePassword: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ChangePasswordDto"];
+            };
+        };
+        responses: {
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     OrganizationsController_list: {
         parameters: {
             query?: never;
@@ -638,6 +1282,99 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["OrganizationMemberDto"][];
+                };
+            };
+        };
+    };
+    OrganizationsController_activity: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WorkspaceActivityDto"];
+                };
+            };
+        };
+    };
+    OrganizationsController_governance: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OrganizationGovernanceDto"];
+                };
+            };
+        };
+    };
+    OrganizationsController_updateGovernance: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateOrganizationGovernanceDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OrganizationGovernanceDto"];
+                };
+            };
+        };
+    };
+    OrganizationsController_updateMember: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+                memberUserId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateOrganizationMemberDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OrganizationMemberDto"];
                 };
             };
         };
@@ -814,6 +1551,592 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+        };
+    };
+    TendersController_list: {
+        parameters: {
+            query?: {
+                pageMode?: unknown;
+                limit?: unknown;
+                cursor?: unknown;
+                stage?: "RFQ" | "FORMAL_TENDER" | "INTERNAL";
+                q?: unknown;
+            };
+            header?: never;
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    TendersController_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateTenderDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TenderDto"];
+                };
+            };
+        };
+    };
+    TendersController_detail: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    TendersController_remove: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    TendersController_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateTenderDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TenderDto"];
+                };
+            };
+        };
+    };
+    TendersController_lot: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateLotDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    TendersController_removeLot: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+                id: string;
+                lotId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    TendersController_updateLot: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+                id: string;
+                lotId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateLotDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    TendersController_item: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+                id: string;
+                lotId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateItemDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    TendersController_removeItem: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+                id: string;
+                lotId: string;
+                itemId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    TendersController_updateItem: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+                id: string;
+                lotId: string;
+                itemId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateItemDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    TendersController_audits: {
+        parameters: {
+            query?: {
+                pageMode?: unknown;
+                action?: unknown;
+                cursor?: unknown;
+                limit?: unknown;
+            };
+            header?: never;
+            path: {
+                slug: string;
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TenderAuditLogDto"][];
+                };
+            };
+        };
+    };
+    CatalogController_list: {
+        parameters: {
+            query?: {
+                pageMode?: unknown;
+                limit?: unknown;
+                cursor?: unknown;
+                status?: "ACTIVE" | "ARCHIVED";
+                q?: unknown;
+            };
+            header?: never;
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProductSummaryDto"][];
+                };
+            };
+        };
+    };
+    CatalogController_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateProductDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProductDetailDto"];
+                };
+            };
+        };
+    };
+    CatalogController_detail: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+                productId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProductDetailDto"];
+                };
+            };
+        };
+    };
+    CatalogController_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+                productId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateProductDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProductDetailDto"];
+                };
+            };
+        };
+    };
+    CatalogController_getVersionById: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+                versionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProductVersionDetailDto"];
+                };
+            };
+        };
+    };
+    CatalogController_createVersion: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+                productId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateProductVersionDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProductVersionDetailDto"];
+                };
+            };
+        };
+    };
+    CatalogController_getProductVersion: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+                productId: string;
+                versionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProductVersionDetailDto"];
+                };
+            };
+        };
+    };
+    CatalogController_updateVersion: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+                productId: string;
+                versionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateProductVersionDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProductVersionDetailDto"];
+                };
+            };
+        };
+    };
+    CatalogController_publishVersion: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+                productId: string;
+                versionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProductVersionDetailDto"];
+                };
+            };
+        };
+    };
+    CatalogController_addSpecification: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+                productId: string;
+                versionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateProductSpecDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProductVersionDetailDto"];
+                };
+            };
+        };
+    };
+    CatalogController_removeSpecification: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+                productId: string;
+                versionId: string;
+                specId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProductVersionDetailDto"];
+                };
+            };
+        };
+    };
+    CatalogController_updateSpecification: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+                productId: string;
+                versionId: string;
+                specId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateProductSpecDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProductVersionDetailDto"];
+                };
             };
         };
     };

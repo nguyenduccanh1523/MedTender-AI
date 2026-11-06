@@ -1,12 +1,13 @@
 import Link from 'next/link'
 
 import { Logo } from '../../components/brand/logo'
+import { ThemeToggle } from '../../components/theme/theme-toggle'
 import { OrganizationApplicationForm } from '../../features/provisioning/components/organization-application-form'
 
 export default function ApplyPage() {
   return (
     <div className="public-shell">
-      <header className="app-header"><div className="app-header-row"><Logo /><nav aria-label="Điều hướng"><Link href="/login">Đăng nhập</Link></nav></div></header>
+      <header className="app-header"><div className="app-header-row"><Logo /><nav aria-label="Điều hướng"><ThemeToggle /><Link href="/login">Đăng nhập</Link></nav></div></header>
       <main className="application-page">
         <aside className="application-intro">
           <p className="eyebrow">Đăng ký sử dụng</p>

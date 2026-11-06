@@ -1,12 +1,13 @@
 import type { ReactNode } from 'react'
 
 import { Logo } from '../../components/brand/logo'
+import { ThemeToggle } from '../../components/theme/theme-toggle'
 
 export default function AuthLayout({ children }: { children: ReactNode }) {
   return (
     <main className="auth-layout">
       <div className="auth-main">
-        <header className="auth-header"><Logo /></header>
+        <header className="auth-header"><Logo /><ThemeToggle /></header>
         <div className="auth-content">{children}</div>
         <footer className="auth-footer">MedTender AI · Không gian làm việc dành cho tổ chức</footer>
       </div>

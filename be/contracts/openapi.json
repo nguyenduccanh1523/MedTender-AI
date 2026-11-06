@@ -176,6 +176,71 @@
         ]
       }
     },
+    "/api/v1/auth/profile": {
+      "patch": {
+        "operationId": "IdentityController_updateProfile",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateProfileDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicUser"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "medtender_access": []
+          }
+        ],
+        "tags": [
+          "identity"
+        ]
+      }
+    },
+    "/api/v1/auth/change-password": {
+      "post": {
+        "operationId": "IdentityController_changePassword",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChangePasswordDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "medtender_access": []
+          }
+        ],
+        "tags": [
+          "identity"
+        ]
+      }
+    },
     "/api/v1/organizations": {
       "get": {
         "operationId": "OrganizationsController_list",
@@ -287,6 +352,172 @@
                   "items": {
                     "$ref": "#/components/schemas/OrganizationMemberDto"
                   }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "medtender_access": []
+          }
+        ],
+        "tags": [
+          "organizations"
+        ]
+      }
+    },
+    "/api/v1/organizations/{slug}/activity": {
+      "get": {
+        "operationId": "OrganizationsController_activity",
+        "parameters": [
+          {
+            "name": "slug",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkspaceActivityDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "medtender_access": []
+          }
+        ],
+        "tags": [
+          "organizations"
+        ]
+      }
+    },
+    "/api/v1/organizations/{slug}/governance": {
+      "get": {
+        "operationId": "OrganizationsController_governance",
+        "parameters": [
+          {
+            "name": "slug",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrganizationGovernanceDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "medtender_access": []
+          }
+        ],
+        "tags": [
+          "organizations"
+        ]
+      },
+      "patch": {
+        "operationId": "OrganizationsController_updateGovernance",
+        "parameters": [
+          {
+            "name": "slug",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateOrganizationGovernanceDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrganizationGovernanceDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "medtender_access": []
+          }
+        ],
+        "tags": [
+          "organizations"
+        ]
+      }
+    },
+    "/api/v1/organizations/{slug}/members/{memberUserId}": {
+      "patch": {
+        "operationId": "OrganizationsController_updateMember",
+        "parameters": [
+          {
+            "name": "slug",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "memberUserId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateOrganizationMemberDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrganizationMemberDto"
                 }
               }
             }
@@ -587,6 +818,1268 @@
           "system admin"
         ]
       }
+    },
+    "/api/v1/organizations/{slug}/tenders": {
+      "get": {
+        "operationId": "TendersController_list",
+        "parameters": [
+          {
+            "name": "slug",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "pageMode",
+            "required": false,
+            "in": "query",
+            "schema": {}
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {}
+          },
+          {
+            "name": "cursor",
+            "required": false,
+            "in": "query",
+            "schema": {}
+          },
+          {
+            "name": "stage",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "enum": [
+                "RFQ",
+                "FORMAL_TENDER",
+                "INTERNAL"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "name": "q",
+            "required": false,
+            "in": "query",
+            "schema": {}
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "medtender_access": []
+          }
+        ],
+        "tags": [
+          "tenders"
+        ]
+      },
+      "post": {
+        "operationId": "TendersController_create",
+        "parameters": [
+          {
+            "name": "slug",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateTenderDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TenderDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "medtender_access": []
+          }
+        ],
+        "tags": [
+          "tenders"
+        ]
+      }
+    },
+    "/api/v1/organizations/{slug}/tenders/{id}": {
+      "get": {
+        "operationId": "TendersController_detail",
+        "parameters": [
+          {
+            "name": "slug",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "medtender_access": []
+          }
+        ],
+        "tags": [
+          "tenders"
+        ]
+      },
+      "patch": {
+        "operationId": "TendersController_update",
+        "parameters": [
+          {
+            "name": "slug",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateTenderDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TenderDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "medtender_access": []
+          }
+        ],
+        "tags": [
+          "tenders"
+        ]
+      },
+      "delete": {
+        "operationId": "TendersController_remove",
+        "parameters": [
+          {
+            "name": "slug",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "medtender_access": []
+          }
+        ],
+        "tags": [
+          "tenders"
+        ]
+      }
+    },
+    "/api/v1/organizations/{slug}/tenders/{id}/lots": {
+      "post": {
+        "operationId": "TendersController_lot",
+        "parameters": [
+          {
+            "name": "slug",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateLotDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "medtender_access": []
+          }
+        ],
+        "tags": [
+          "tenders"
+        ]
+      }
+    },
+    "/api/v1/organizations/{slug}/tenders/{id}/lots/{lotId}": {
+      "patch": {
+        "operationId": "TendersController_updateLot",
+        "parameters": [
+          {
+            "name": "slug",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "lotId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateLotDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "medtender_access": []
+          }
+        ],
+        "tags": [
+          "tenders"
+        ]
+      },
+      "delete": {
+        "operationId": "TendersController_removeLot",
+        "parameters": [
+          {
+            "name": "slug",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "lotId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "medtender_access": []
+          }
+        ],
+        "tags": [
+          "tenders"
+        ]
+      }
+    },
+    "/api/v1/organizations/{slug}/tenders/{id}/lots/{lotId}/items": {
+      "post": {
+        "operationId": "TendersController_item",
+        "parameters": [
+          {
+            "name": "slug",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "lotId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateItemDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "medtender_access": []
+          }
+        ],
+        "tags": [
+          "tenders"
+        ]
+      }
+    },
+    "/api/v1/organizations/{slug}/tenders/{id}/lots/{lotId}/items/{itemId}": {
+      "patch": {
+        "operationId": "TendersController_updateItem",
+        "parameters": [
+          {
+            "name": "slug",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "lotId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "itemId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateItemDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "medtender_access": []
+          }
+        ],
+        "tags": [
+          "tenders"
+        ]
+      },
+      "delete": {
+        "operationId": "TendersController_removeItem",
+        "parameters": [
+          {
+            "name": "slug",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "lotId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "itemId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "medtender_access": []
+          }
+        ],
+        "tags": [
+          "tenders"
+        ]
+      }
+    },
+    "/api/v1/organizations/{slug}/tenders/{id}/audits": {
+      "get": {
+        "operationId": "TendersController_audits",
+        "parameters": [
+          {
+            "name": "slug",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "pageMode",
+            "required": false,
+            "in": "query",
+            "schema": {}
+          },
+          {
+            "name": "action",
+            "required": false,
+            "in": "query",
+            "schema": {}
+          },
+          {
+            "name": "cursor",
+            "required": false,
+            "in": "query",
+            "schema": {}
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {}
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/TenderAuditLogDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "medtender_access": []
+          }
+        ],
+        "tags": [
+          "tenders"
+        ]
+      }
+    },
+    "/api/v1/organizations/{slug}/catalog/products": {
+      "get": {
+        "operationId": "CatalogController_list",
+        "parameters": [
+          {
+            "name": "slug",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "pageMode",
+            "required": false,
+            "in": "query",
+            "schema": {}
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {}
+          },
+          {
+            "name": "cursor",
+            "required": false,
+            "in": "query",
+            "schema": {}
+          },
+          {
+            "name": "status",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "enum": [
+                "ACTIVE",
+                "ARCHIVED"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "name": "q",
+            "required": false,
+            "in": "query",
+            "schema": {}
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ProductSummaryDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "medtender_access": []
+          }
+        ],
+        "tags": [
+          "catalog"
+        ]
+      },
+      "post": {
+        "operationId": "CatalogController_create",
+        "parameters": [
+          {
+            "name": "slug",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateProductDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProductDetailDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "medtender_access": []
+          }
+        ],
+        "tags": [
+          "catalog"
+        ]
+      }
+    },
+    "/api/v1/organizations/{slug}/catalog/products/{productId}": {
+      "get": {
+        "operationId": "CatalogController_detail",
+        "parameters": [
+          {
+            "name": "slug",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "productId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProductDetailDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "medtender_access": []
+          }
+        ],
+        "tags": [
+          "catalog"
+        ]
+      },
+      "patch": {
+        "operationId": "CatalogController_update",
+        "parameters": [
+          {
+            "name": "slug",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "productId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateProductDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProductDetailDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "medtender_access": []
+          }
+        ],
+        "tags": [
+          "catalog"
+        ]
+      }
+    },
+    "/api/v1/organizations/{slug}/catalog/versions/{versionId}": {
+      "get": {
+        "operationId": "CatalogController_getVersionById",
+        "parameters": [
+          {
+            "name": "slug",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "versionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProductVersionDetailDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "medtender_access": []
+          }
+        ],
+        "tags": [
+          "catalog"
+        ]
+      }
+    },
+    "/api/v1/organizations/{slug}/catalog/products/{productId}/versions": {
+      "post": {
+        "operationId": "CatalogController_createVersion",
+        "parameters": [
+          {
+            "name": "slug",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "productId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateProductVersionDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProductVersionDetailDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "medtender_access": []
+          }
+        ],
+        "tags": [
+          "catalog"
+        ]
+      }
+    },
+    "/api/v1/organizations/{slug}/catalog/products/{productId}/versions/{versionId}": {
+      "get": {
+        "operationId": "CatalogController_getProductVersion",
+        "parameters": [
+          {
+            "name": "slug",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "productId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "versionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProductVersionDetailDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "medtender_access": []
+          }
+        ],
+        "tags": [
+          "catalog"
+        ]
+      },
+      "patch": {
+        "operationId": "CatalogController_updateVersion",
+        "parameters": [
+          {
+            "name": "slug",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "productId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "versionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateProductVersionDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProductVersionDetailDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "medtender_access": []
+          }
+        ],
+        "tags": [
+          "catalog"
+        ]
+      }
+    },
+    "/api/v1/organizations/{slug}/catalog/products/{productId}/versions/{versionId}/publish": {
+      "post": {
+        "operationId": "CatalogController_publishVersion",
+        "parameters": [
+          {
+            "name": "slug",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "productId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "versionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProductVersionDetailDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "medtender_access": []
+          }
+        ],
+        "tags": [
+          "catalog"
+        ]
+      }
+    },
+    "/api/v1/organizations/{slug}/catalog/products/{productId}/versions/{versionId}/specifications": {
+      "post": {
+        "operationId": "CatalogController_addSpecification",
+        "parameters": [
+          {
+            "name": "slug",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "productId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "versionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateProductSpecDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProductVersionDetailDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "medtender_access": []
+          }
+        ],
+        "tags": [
+          "catalog"
+        ]
+      }
+    },
+    "/api/v1/organizations/{slug}/catalog/products/{productId}/versions/{versionId}/specifications/{specId}": {
+      "patch": {
+        "operationId": "CatalogController_updateSpecification",
+        "parameters": [
+          {
+            "name": "slug",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "productId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "versionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "specId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateProductSpecDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProductVersionDetailDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "medtender_access": []
+          }
+        ],
+        "tags": [
+          "catalog"
+        ]
+      },
+      "delete": {
+        "operationId": "CatalogController_removeSpecification",
+        "parameters": [
+          {
+            "name": "slug",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "productId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "versionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "specId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProductVersionDetailDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "medtender_access": []
+          }
+        ],
+        "tags": [
+          "catalog"
+        ]
+      }
     }
   },
   "info": {
@@ -713,6 +2206,37 @@
           "password"
         ]
       },
+      "UpdateProfileDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 100
+          }
+        },
+        "required": [
+          "name"
+        ]
+      },
+      "ChangePasswordDto": {
+        "type": "object",
+        "properties": {
+          "currentPassword": {
+            "type": "string",
+            "maxLength": 128
+          },
+          "newPassword": {
+            "type": "string",
+            "minLength": 12,
+            "maxLength": 128
+          }
+        },
+        "required": [
+          "currentPassword",
+          "newPassword"
+        ]
+      },
       "OrganizationDto": {
         "type": "object",
         "properties": {
@@ -782,6 +2306,304 @@
           "role",
           "status"
         ]
+      },
+      "WorkspaceActivityMetricsDto": {
+        "type": "object",
+        "properties": {
+          "tendersCount": {
+            "type": "number"
+          },
+          "lotsCount": {
+            "type": "number"
+          },
+          "itemsCount": {
+            "type": "number"
+          },
+          "productsCount": {
+            "type": "number"
+          },
+          "publishedVersionsCount": {
+            "type": "number"
+          },
+          "draftVersionsCount": {
+            "type": "number"
+          },
+          "conflictingSpecsCount": {
+            "type": "number"
+          },
+          "membersCount": {
+            "type": "number",
+            "nullable": true
+          },
+          "pendingInvitationsCount": {
+            "type": "number",
+            "nullable": true
+          }
+        },
+        "required": [
+          "tendersCount",
+          "lotsCount",
+          "itemsCount",
+          "productsCount",
+          "publishedVersionsCount",
+          "draftVersionsCount",
+          "conflictingSpecsCount",
+          "membersCount",
+          "pendingInvitationsCount"
+        ]
+      },
+      "WorkspaceWorkQueueItemDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "category": {
+            "type": "string"
+          },
+          "priority": {
+            "type": "string",
+            "enum": [
+              "HIGH",
+              "MEDIUM",
+              "INFO"
+            ]
+          },
+          "title": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "href": {
+            "type": "string"
+          },
+          "ctaLabel": {
+            "type": "string"
+          },
+          "meta": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "category",
+          "priority",
+          "title",
+          "description",
+          "href",
+          "ctaLabel",
+          "meta"
+        ]
+      },
+      "WorkspaceTimelineItemDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "summary": {
+            "type": "string"
+          },
+          "actorName": {
+            "type": "string"
+          },
+          "actorRole": {
+            "type": "string",
+            "enum": [
+              "OWNER",
+              "ADMIN",
+              "BID_MANAGER",
+              "ANALYST",
+              "CATALOG_MANAGER",
+              "REVIEWER",
+              "VIEWER"
+            ]
+          },
+          "createdAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "href": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "id",
+          "action",
+          "summary",
+          "actorName",
+          "actorRole",
+          "createdAt",
+          "href"
+        ]
+      },
+      "WorkspaceActivityDto": {
+        "type": "object",
+        "properties": {
+          "role": {
+            "type": "string",
+            "enum": [
+              "OWNER",
+              "ADMIN",
+              "BID_MANAGER",
+              "ANALYST",
+              "CATALOG_MANAGER",
+              "REVIEWER",
+              "VIEWER"
+            ]
+          },
+          "metrics": {
+            "$ref": "#/components/schemas/WorkspaceActivityMetricsDto"
+          },
+          "workQueue": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/WorkspaceWorkQueueItemDto"
+            }
+          },
+          "timeline": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/WorkspaceTimelineItemDto"
+            }
+          }
+        },
+        "required": [
+          "role",
+          "metrics",
+          "workQueue",
+          "timeline"
+        ]
+      },
+      "OrganizationGovernanceSettingsDto": {
+        "type": "object",
+        "properties": {
+          "requireIndependentReviewer": {
+            "type": "boolean"
+          },
+          "externalAiPolicy": {
+            "type": "string"
+          },
+          "defaultDataClassification": {
+            "type": "string",
+            "enum": [
+              "INTERNAL",
+              "CONFIDENTIAL",
+              "RESTRICTED"
+            ]
+          },
+          "maxLotsPerTender": {
+            "type": "number"
+          },
+          "maxItemsPerTender": {
+            "type": "number"
+          },
+          "maxSpecsPerVersion": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "requireIndependentReviewer",
+          "externalAiPolicy",
+          "defaultDataClassification",
+          "maxLotsPerTender",
+          "maxItemsPerTender",
+          "maxSpecsPerVersion"
+        ]
+      },
+      "OrganizationGovernanceDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "slug": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "createdAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "settings": {
+            "$ref": "#/components/schemas/OrganizationGovernanceSettingsDto"
+          },
+          "members": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/OrganizationMemberDto"
+            }
+          },
+          "recentAudits": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/WorkspaceTimelineItemDto"
+            }
+          }
+        },
+        "required": [
+          "id",
+          "slug",
+          "name",
+          "status",
+          "createdAt",
+          "settings",
+          "members",
+          "recentAudits"
+        ]
+      },
+      "UpdateOrganizationGovernanceDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "requireIndependentReviewer": {
+            "type": "boolean"
+          },
+          "defaultDataClassification": {
+            "type": "string",
+            "enum": [
+              "INTERNAL",
+              "CONFIDENTIAL",
+              "RESTRICTED"
+            ]
+          }
+        }
+      },
+      "UpdateOrganizationMemberDto": {
+        "type": "object",
+        "properties": {
+          "role": {
+            "type": "string",
+            "enum": [
+              "OWNER",
+              "ADMIN",
+              "BID_MANAGER",
+              "ANALYST",
+              "CATALOG_MANAGER",
+              "REVIEWER",
+              "VIEWER"
+            ]
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "ACTIVE",
+              "DISABLED"
+            ]
+          }
+        }
       },
       "InvitationDto": {
         "type": "object",
@@ -1080,6 +2902,768 @@
         "required": [
           "reason"
         ]
+      },
+      "CreateTenderDto": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string"
+          },
+          "procurementStage": {
+            "type": "string",
+            "enum": [
+              "RFQ",
+              "FORMAL_TENDER",
+              "INTERNAL"
+            ]
+          },
+          "reference": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "title",
+          "procurementStage"
+        ]
+      },
+      "TenderCountDto": {
+        "type": "object",
+        "properties": {
+          "lots": {
+            "type": "number"
+          },
+          "items": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "lots"
+        ]
+      },
+      "TenderDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "organizationId": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "reference": {
+            "type": "object",
+            "nullable": true
+          },
+          "procurementStage": {
+            "type": "string",
+            "enum": [
+              "RFQ",
+              "FORMAL_TENDER",
+              "INTERNAL"
+            ]
+          },
+          "createdByUserId": {
+            "type": "string"
+          },
+          "createdAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "updatedAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "_count": {
+            "$ref": "#/components/schemas/TenderCountDto"
+          }
+        },
+        "required": [
+          "id",
+          "organizationId",
+          "title",
+          "reference",
+          "procurementStage",
+          "createdByUserId",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "UpdateTenderDto": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string"
+          },
+          "procurementStage": {
+            "type": "string",
+            "enum": [
+              "RFQ",
+              "FORMAL_TENDER",
+              "INTERNAL"
+            ]
+          },
+          "reference": {
+            "type": "object",
+            "nullable": true
+          }
+        }
+      },
+      "CreateLotDto": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "name"
+        ]
+      },
+      "UpdateLotDto": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          }
+        }
+      },
+      "CreateItemDto": {
+        "type": "object",
+        "properties": {
+          "itemNo": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "quantity": {
+            "type": "number"
+          },
+          "unit": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "itemNo",
+          "name",
+          "quantity",
+          "unit"
+        ]
+      },
+      "UpdateItemDto": {
+        "type": "object",
+        "properties": {
+          "itemNo": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "quantity": {
+            "type": "number"
+          },
+          "unit": {
+            "type": "string"
+          },
+          "description": {
+            "type": "object",
+            "nullable": true
+          }
+        }
+      },
+      "TenderAuditLogDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "tenderId": {
+            "type": "object",
+            "nullable": true
+          },
+          "lotId": {
+            "type": "object",
+            "nullable": true
+          },
+          "itemId": {
+            "type": "object",
+            "nullable": true
+          },
+          "actorUserId": {
+            "type": "string"
+          },
+          "actorName": {
+            "type": "string"
+          },
+          "actorRole": {
+            "type": "string",
+            "enum": [
+              "OWNER",
+              "ADMIN",
+              "BID_MANAGER",
+              "ANALYST",
+              "CATALOG_MANAGER",
+              "REVIEWER",
+              "VIEWER"
+            ]
+          },
+          "action": {
+            "type": "string"
+          },
+          "summary": {
+            "type": "string"
+          },
+          "details": {
+            "type": "object"
+          },
+          "createdAt": {
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "tenderId",
+          "lotId",
+          "itemId",
+          "actorUserId",
+          "actorName",
+          "actorRole",
+          "action",
+          "summary",
+          "details",
+          "createdAt"
+        ]
+      },
+      "ProductVersionSummaryDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "productId": {
+            "type": "string"
+          },
+          "versionNumber": {
+            "type": "number"
+          },
+          "versionLabel": {
+            "type": "string"
+          },
+          "modelCode": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "DRAFT",
+              "PUBLISHED",
+              "SUPERSEDED"
+            ]
+          },
+          "fingerprint": {
+            "type": "string"
+          },
+          "notes": {
+            "type": "string",
+            "nullable": true
+          },
+          "publishedAt": {
+            "format": "date-time",
+            "type": "string",
+            "nullable": true
+          },
+          "createdAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "updatedAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "specificationCount": {
+            "type": "number"
+          },
+          "conflictCount": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "id",
+          "productId",
+          "versionNumber",
+          "versionLabel",
+          "modelCode",
+          "status",
+          "fingerprint",
+          "notes",
+          "publishedAt",
+          "createdAt",
+          "updatedAt",
+          "specificationCount",
+          "conflictCount"
+        ]
+      },
+      "ProductSummaryDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "organizationId": {
+            "type": "string"
+          },
+          "sku": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "brand": {
+            "type": "string"
+          },
+          "manufacturer": {
+            "type": "string",
+            "nullable": true
+          },
+          "category": {
+            "type": "string",
+            "nullable": true
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "ACTIVE",
+              "ARCHIVED"
+            ]
+          },
+          "createdAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "updatedAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "versionCount": {
+            "type": "number"
+          },
+          "latestVersion": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ProductVersionSummaryDto"
+              }
+            ]
+          },
+          "publishedVersion": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ProductVersionSummaryDto"
+              }
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "organizationId",
+          "sku",
+          "name",
+          "brand",
+          "manufacturer",
+          "category",
+          "status",
+          "createdAt",
+          "updatedAt",
+          "versionCount",
+          "latestVersion",
+          "publishedVersion"
+        ]
+      },
+      "CreateProductSpecDto": {
+        "type": "object",
+        "properties": {
+          "specKey": {
+            "type": "string"
+          },
+          "specValue": {
+            "type": "string"
+          },
+          "unit": {
+            "type": "string",
+            "nullable": true
+          },
+          "sourceLabel": {
+            "type": "string"
+          },
+          "sourceQuote": {
+            "type": "string",
+            "nullable": true
+          },
+          "documentVersionId": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "specKey",
+          "specValue",
+          "sourceLabel"
+        ]
+      },
+      "CreateProductDto": {
+        "type": "object",
+        "properties": {
+          "sku": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "brand": {
+            "type": "string"
+          },
+          "manufacturer": {
+            "type": "string"
+          },
+          "category": {
+            "type": "string"
+          },
+          "modelCode": {
+            "type": "string"
+          },
+          "notes": {
+            "type": "string"
+          },
+          "specifications": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CreateProductSpecDto"
+            }
+          }
+        },
+        "required": [
+          "sku",
+          "name",
+          "brand"
+        ]
+      },
+      "ProductSpecificationDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "productVersionId": {
+            "type": "string"
+          },
+          "specKey": {
+            "type": "string"
+          },
+          "specValue": {
+            "type": "string"
+          },
+          "unit": {
+            "type": "string",
+            "nullable": true
+          },
+          "sourceLabel": {
+            "type": "string"
+          },
+          "sourceQuote": {
+            "type": "string",
+            "nullable": true
+          },
+          "documentVersionId": {
+            "type": "string",
+            "nullable": true
+          },
+          "hasConflict": {
+            "type": "boolean"
+          },
+          "createdAt": {
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "productVersionId",
+          "specKey",
+          "specValue",
+          "unit",
+          "sourceLabel",
+          "sourceQuote",
+          "documentVersionId",
+          "hasConflict",
+          "createdAt"
+        ]
+      },
+      "ProductVersionDetailDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "productId": {
+            "type": "string"
+          },
+          "versionNumber": {
+            "type": "number"
+          },
+          "versionLabel": {
+            "type": "string"
+          },
+          "modelCode": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "DRAFT",
+              "PUBLISHED",
+              "SUPERSEDED"
+            ]
+          },
+          "fingerprint": {
+            "type": "string"
+          },
+          "notes": {
+            "type": "string",
+            "nullable": true
+          },
+          "publishedAt": {
+            "format": "date-time",
+            "type": "string",
+            "nullable": true
+          },
+          "createdAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "updatedAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "specificationCount": {
+            "type": "number"
+          },
+          "conflictCount": {
+            "type": "number"
+          },
+          "specifications": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ProductSpecificationDto"
+            }
+          }
+        },
+        "required": [
+          "id",
+          "productId",
+          "versionNumber",
+          "versionLabel",
+          "modelCode",
+          "status",
+          "fingerprint",
+          "notes",
+          "publishedAt",
+          "createdAt",
+          "updatedAt",
+          "specificationCount",
+          "conflictCount",
+          "specifications"
+        ]
+      },
+      "ProductDetailDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "organizationId": {
+            "type": "string"
+          },
+          "sku": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "brand": {
+            "type": "string"
+          },
+          "manufacturer": {
+            "type": "string",
+            "nullable": true
+          },
+          "category": {
+            "type": "string",
+            "nullable": true
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "ACTIVE",
+              "ARCHIVED"
+            ]
+          },
+          "createdAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "updatedAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "versionCount": {
+            "type": "number"
+          },
+          "latestVersion": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ProductVersionSummaryDto"
+              }
+            ]
+          },
+          "publishedVersion": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ProductVersionSummaryDto"
+              }
+            ]
+          },
+          "versions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ProductVersionDetailDto"
+            }
+          }
+        },
+        "required": [
+          "id",
+          "organizationId",
+          "sku",
+          "name",
+          "brand",
+          "manufacturer",
+          "category",
+          "status",
+          "createdAt",
+          "updatedAt",
+          "versionCount",
+          "latestVersion",
+          "publishedVersion",
+          "versions"
+        ]
+      },
+      "UpdateProductDto": {
+        "type": "object",
+        "properties": {
+          "sku": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "brand": {
+            "type": "string"
+          },
+          "manufacturer": {
+            "type": "string",
+            "nullable": true
+          },
+          "category": {
+            "type": "string",
+            "nullable": true
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "ACTIVE",
+              "ARCHIVED"
+            ]
+          }
+        }
+      },
+      "CreateProductVersionDto": {
+        "type": "object",
+        "properties": {
+          "modelCode": {
+            "type": "string"
+          },
+          "versionLabel": {
+            "type": "string"
+          },
+          "notes": {
+            "type": "string"
+          },
+          "cloneFromVersionId": {
+            "type": "string"
+          },
+          "specifications": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CreateProductSpecDto"
+            }
+          }
+        },
+        "required": [
+          "modelCode"
+        ]
+      },
+      "UpdateProductVersionDto": {
+        "type": "object",
+        "properties": {
+          "modelCode": {
+            "type": "string"
+          },
+          "notes": {
+            "type": "string",
+            "nullable": true
+          }
+        }
+      },
+      "UpdateProductSpecDto": {
+        "type": "object",
+        "properties": {
+          "specKey": {
+            "type": "string"
+          },
+          "specValue": {
+            "type": "string"
+          },
+          "unit": {
+            "type": "string",
+            "nullable": true
+          },
+          "sourceLabel": {
+            "type": "string"
+          },
+          "sourceQuote": {
+            "type": "string",
+            "nullable": true
+          }
+        }
       }
     }
   }

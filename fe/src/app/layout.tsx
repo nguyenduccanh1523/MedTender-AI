@@ -3,6 +3,8 @@ import type { ReactNode } from 'react'
 
 import { QueryProvider } from '../providers/query-provider'
 import './globals.css'
+import './theme.css'
+import './tenders.css'
 
 export const metadata: Metadata = {
   title: 'MedTender AI',
@@ -10,9 +12,14 @@ export const metadata: Metadata = {
   icons: { icon: '/icon.svg' },
 }
 
+const themeBootScript = `(function(){try{var s=localStorage.getItem('medtender:theme');var m=window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches;var t=s==='dark'||s==='light'?s:(m?'dark':'light');document.documentElement.dataset.theme=t;document.documentElement.style.colorScheme=t;}catch(e){}})();`
+
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
-    <html lang="vi">
+    <html lang="vi" suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: themeBootScript }} />
+      </head>
       <body>
         <QueryProvider>{children}</QueryProvider>
       </body>

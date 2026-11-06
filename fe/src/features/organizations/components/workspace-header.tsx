@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 
 import { Logo } from '../../../components/brand/logo'
+import { ThemeToggle } from '../../../components/theme/theme-toggle'
 import { logout } from '../../auth/api'
 import { clearCachedUser } from '../../auth/session-cache'
 import { clearOrganizationCache } from '../organization-cache'
@@ -37,6 +38,7 @@ export function WorkspaceHeader({ label, role }: { label?: string; role?: string
         <nav aria-label="Không gian làm việc" className="workspace-header-nav">
           {label && <span className="workspace-org-chip"><b>{label}</b>{role && <small>{role}</small>}</span>}
           {label && <Link href="/organizations">Đổi tổ chức</Link>}
+          <ThemeToggle />
           <button type="button" className="button button-secondary" onClick={signOut} disabled={pending}>
             {pending ? 'Đang đăng xuất…' : 'Đăng xuất'}
           </button>

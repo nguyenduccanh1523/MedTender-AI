@@ -19,3 +19,17 @@ export function useWorkspaceRole() {
 export function canCreateTender(role: WorkspaceRole | null) {
   return role === 'OWNER' || role === 'ADMIN' || role === 'BID_MANAGER'
 }
+
+export function canViewTenderAudits(role: WorkspaceRole | null) {
+  return role === 'OWNER' || role === 'ADMIN'
+}
+
+export function canManageCatalog(role: WorkspaceRole | null) {
+  return role === 'OWNER' || role === 'ADMIN' || role === 'CATALOG_MANAGER'
+}
+
+export function canManageOrganizationGovernance(role: WorkspaceRole | null) {
+  return role === 'OWNER'
+}
+
+

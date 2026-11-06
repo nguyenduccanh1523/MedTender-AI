@@ -152,4 +152,31 @@ export class IdentityService {
       data: { revokedAt: new Date() },
     })
   }
+
+  async updateProfile(userId: string, name: string) {
+    const updated = await this.database.db.user.update({
+      where: { id: userId },
+      data: { displayName: name },
+      select: userFields,
+    })
+    return toPublic(updated)
+  }
+
+  async changePassword(userId: string, currentPassword: string, newPassword: string) {
+    const db = this.database.db
+    const user = await db.user.findUnique({
+      where: { id: userId },
+      select: { id: true, passwordHash: true },
+    })
+    const valid = await verifyPassword(currentPassword, user?.passwordHash)
+    if (!user || !valid) {
+      throw new UnauthorizedException('Mật khẩu hiện tại không đúng.')
+    }
+    const passwordHash = await hashPassword(newPassword)
+    await db.user.update({
+      where: { id: userId },
+      data: { passwordHash },
+      select: { id: true },
+    })
+  }
 }

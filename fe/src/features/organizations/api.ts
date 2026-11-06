@@ -4,6 +4,10 @@ import { api } from '../../lib/api/client'
 
 export type Organization = components['schemas']['OrganizationDto']
 export type OrganizationMember = components['schemas']['OrganizationMemberDto']
+export type WorkspaceActivity = components['schemas']['WorkspaceActivityDto']
+export type OrganizationGovernance = components['schemas']['OrganizationGovernanceDto']
+export type UpdateOrganizationGovernanceInput = components['schemas']['UpdateOrganizationGovernanceDto']
+export type UpdateOrganizationMemberInput = components['schemas']['UpdateOrganizationMemberDto']
 
 export function listOrganizations() {
   return api<Organization[]>('/organizations')
@@ -20,3 +24,36 @@ export function getOrganization(slug: string) {
 export function listOrganizationMembers(slug: string) {
   return api<OrganizationMember[]>(`/organizations/${encodeURIComponent(slug)}/members`)
 }
+
+export function getWorkspaceActivity(slug: string) {
+  return api<WorkspaceActivity>(`/organizations/${encodeURIComponent(slug)}/activity`)
+}
+
+export function getOrganizationGovernance(slug: string) {
+  return api<OrganizationGovernance>(`/organizations/${encodeURIComponent(slug)}/governance`)
+}
+
+export function updateOrganizationGovernance(
+  slug: string,
+  input: UpdateOrganizationGovernanceInput,
+) {
+  return api<OrganizationGovernance>(`/organizations/${encodeURIComponent(slug)}/governance`, {
+    method: 'PATCH',
+    body: JSON.stringify(input),
+  })
+}
+
+export function updateOrganizationMember(
+  slug: string,
+  memberUserId: string,
+  input: UpdateOrganizationMemberInput,
+) {
+  return api<OrganizationMember>(
+    `/organizations/${encodeURIComponent(slug)}/members/${encodeURIComponent(memberUserId)}`,
+    {
+      method: 'PATCH',
+      body: JSON.stringify(input),
+    },
+  )
+}
+

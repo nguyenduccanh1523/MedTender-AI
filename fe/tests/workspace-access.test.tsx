@@ -55,7 +55,18 @@ it('uses separate workspace routes instead of page anchors', async () => {
 
   expect((await screen.findByRole('link', { name: 'Tổng quan' })).getAttribute('href')).toBe('/org-a')
   expect(screen.getByRole('link', { name: 'Hoạt động' }).getAttribute('href')).toBe('/org-a/hoat-dong')
+  expect(screen.getByRole('link', { name: 'Catalog thiết bị' }).getAttribute('href')).toBe('/org-a/catalog')
   expect(screen.getByRole('link', { name: 'Quản trị đội ngũ' }).getAttribute('href')).toBe('/org-a/thanh-vien')
+  expect(screen.getByRole('link', { name: 'Quản trị tổ chức' }).getAttribute('href')).toBe('/org-a/quan-tri-to-chuc')
+  expect(screen.getByRole('link', { name: 'Hồ sơ cá nhân' }).getAttribute('href')).toBe('/org-a/ho-so-ca-nhan')
+})
+
+it('shows Quản trị tổ chức exclusively for OWNER and hides it from ADMIN', async () => {
+  getOrganization.mockResolvedValue({ id: 'org-a', slug: 'org-a', name: 'Tổ chức A', role: 'ADMIN' })
+  render(<WorkspaceAccess slug="org-a"><p>Nội dung workspace</p></WorkspaceAccess>)
+
+  expect(await screen.findByRole('link', { name: 'Quản trị đội ngũ' })).toBeTruthy()
+  expect(screen.queryByRole('link', { name: 'Quản trị tổ chức' })).toBeNull()
 })
 
 it('collapses and reopens the sidebar while keeping navigation accessible', async () => {

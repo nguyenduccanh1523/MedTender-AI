@@ -1,0 +1,626 @@
+/* Typography refinement & Dark/Light theme system */
+@import url('https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@600;700;800&display=swap');
+
+:root {
+  --font-sans: 'Be Vietnam Pro', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --font-display: 'Plus Jakarta Sans', 'Be Vietnam Pro', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+
+body {
+  font-family: var(--font-sans);
+}
+
+/* Replace generic AI serif on landing & marketing pages with clean Vietnamese geometric display */
+.enterprise-page,
+.platform-page,
+.workflow-page,
+.governance-page,
+.governance-v2,
+.public-shell {
+  font-family: var(--font-sans);
+}
+
+.enterprise-home-hero h1,
+.enterprise-summary strong,
+.enterprise-sections h2,
+.enterprise-intro h1,
+.enterprise-operating-model h2,
+.workflow-hero h1,
+.governance-hero h1,
+.workflow-hero aside strong,
+.platform-hero h1,
+.platform-structure strong,
+.platform-foundations h2,
+.platform-evidence h2,
+.workflow-timeline h2,
+.workflow-note h2,
+.governance-model h2,
+.governance-guardrails strong,
+.governance-control-card > strong,
+.governance-v2-lead h1,
+.governance-v2-section-head h2,
+.governance-v2-process h3,
+.governance-v2-role-grid h3,
+.governance-v2-closing h2,
+.diagram-mark {
+  font-family: var(--font-display);
+  font-weight: 700;
+  letter-spacing: -0.032em;
+}
+
+.enterprise-home-hero h1,
+.enterprise-intro h1,
+.workflow-hero h1,
+.governance-hero h1,
+.platform-hero h1,
+.governance-v2-lead h1 {
+  font-size: clamp(2.65rem, 5.2vw, 4.65rem);
+  line-height: 1.06;
+  letter-spacing: -0.035em;
+  max-width: 14ch;
+}
+
+.enterprise-summary strong,
+.enterprise-sections h2,
+.platform-foundations h2,
+.governance-v2-process h3,
+.governance-v2-role-grid h3 {
+  font-weight: 680;
+  letter-spacing: -0.02em;
+}
+
+/* Auth header layout with theme toggle */
+.auth-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.enterprise-header-actions {
+  display: flex;
+  align-items: center;
+  gap: clamp(.75rem, 2vw, 1.35rem);
+}
+
+/* Theme toggle icon button */
+.theme-toggle {
+  display: inline-grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  flex: 0 0 38px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--ink);
+  cursor: pointer;
+  transition: background-color .16s ease, border-color .16s ease, color .16s ease, transform .14s ease;
+}
+
+.theme-toggle:hover {
+  border-color: var(--teal);
+  color: var(--teal);
+  background: var(--accent-soft);
+}
+
+.theme-toggle .theme-icon {
+  grid-area: 1 / 1;
+  transition: opacity .16s ease, transform .2s ease;
+}
+
+/* In light mode, show moon icon (click to switch to dark). In dark mode, show sun icon. */
+.theme-toggle .theme-icon-sun {
+  opacity: 0;
+  transform: rotate(-30deg) scale(0.75);
+}
+
+.theme-toggle .theme-icon-moon {
+  opacity: 1;
+  transform: rotate(0deg) scale(1);
+}
+
+[data-theme='dark'] .theme-toggle .theme-icon-sun {
+  opacity: 1;
+  transform: rotate(0deg) scale(1);
+}
+
+[data-theme='dark'] .theme-toggle .theme-icon-moon {
+  opacity: 0;
+  transform: rotate(30deg) scale(0.75);
+}
+
+.admin-header .theme-toggle {
+  border-color: #28526e;
+  background: #0d3550;
+  color: #dff7f3;
+}
+
+.admin-header .theme-toggle:hover {
+  border-color: #58dfbc;
+  color: #58dfbc;
+}
+
+/* Dark theme variables & surface overrides — Neutral enterprise carbon/slate */
+[data-theme='dark'] {
+  --ink: #e2e8f0;
+  --muted: #8b95a7;
+  --teal: #14b8a6;
+  --line: #232a37;
+  --wash: #0b0d12;
+  --surface: #12161f;
+  --surface-muted: #181d27;
+  --heading: #f8fafc;
+  --field-bg: #0e121a;
+  --field-line: #2e3748;
+  --accent-soft: #152529;
+  --accent-line: #224349;
+  --accent-ink: #5eead4;
+  --danger-ink: #fca5a5;
+  --danger-soft: #281418;
+  --danger-line: #52232a;
+  --shadow-soft: 0 1px 3px 0 rgb(0 0 0 / 0.35), 0 1px 2px -1px rgb(0 0 0 / 0.25);
+  color-scheme: dark;
+}
+
+[data-theme='dark'] body {
+  background: var(--wash);
+  color: var(--ink);
+}
+
+/* Brand logo multi-layer lockup: seamlessly adapts to light and dark backgrounds */
+.brand-logo .brand-lockup {
+  position: relative;
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.brand-logo .brand-layer {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  max-width: none;
+  height: 100%;
+  object-fit: contain;
+  transform: none;
+}
+
+.brand-logo .brand-layer-word,
+.brand-logo .brand-layer-ai {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.brand-logo.brand-logo-dark .brand-layer-word,
+[data-theme='dark'] .brand-logo .brand-layer-word {
+  opacity: 1;
+  clip-path: inset(0 0 0 27%);
+  filter: brightness(0) invert(1);
+}
+
+.brand-logo.brand-logo-dark .brand-layer-ai,
+[data-theme='dark'] .brand-logo .brand-layer-ai {
+  opacity: 1;
+  clip-path: inset(0 0 0 84%);
+  filter: brightness(0) saturate(100%) invert(77%) sepia(64%) saturate(493%) hue-rotate(124deg) brightness(96%) contrast(94%);
+}
+
+[data-theme='dark'] .app-header,
+[data-theme='dark'] .workspace-header {
+  background: #0e1117;
+  border-bottom-color: var(--line);
+}
+
+[data-theme='dark'] .workspace-sidebar {
+  border-right-color: var(--line);
+  border-bottom-color: var(--line);
+}
+
+[data-theme='dark'] .workspace-sidebar-label {
+  color: var(--muted);
+}
+
+[data-theme='dark'] .workspace-sidebar nav a {
+  color: #94a3b8;
+}
+
+[data-theme='dark'] .workspace-sidebar nav a span {
+  color: #64748b;
+}
+
+[data-theme='dark'] .workspace-sidebar nav a:hover {
+  background: var(--surface-muted);
+  color: var(--ink);
+}
+
+[data-theme='dark'] .workspace-sidebar nav .is-current {
+  background: var(--surface-muted);
+  color: var(--heading);
+  box-shadow: inset 3px 0 0 var(--teal);
+}
+
+[data-theme='dark'] .workspace-sidebar nav .is-current span:first-child {
+  color: var(--teal);
+}
+
+[data-theme='dark'] .workspace-sidebar-note {
+  border-color: #1f5c63;
+  background: linear-gradient(145deg, #13252c 0%, #0f3538 100%);
+  box-shadow: 0 10px 24px -6px rgb(0 0 0 / 0.45);
+}
+
+[data-theme='dark'] .role-action-primary a {
+  background: #0d9488;
+  color: #ffffff !important;
+}
+
+[data-theme='dark'] .role-action-primary a:hover {
+  background: #0f766e;
+}
+
+[data-theme='dark'] .workspace-sidebar-toggle {
+  background: var(--surface);
+  border-color: var(--line);
+  color: var(--muted);
+}
+
+[data-theme='dark'] .workspace-sidebar-toggle:hover {
+  background: var(--surface-muted);
+  border-color: var(--field-line);
+  color: var(--ink);
+}
+
+[data-theme='dark'] .workspace-live {
+  background: var(--surface);
+  border-color: var(--line);
+  color: var(--ink);
+}
+
+[data-theme='dark'] .surface,
+[data-theme='dark'] .workspace-route-panel,
+[data-theme='dark'] .application-card,
+[data-theme='dark'] .application-queue,
+[data-theme='dark'] .application-detail,
+[data-theme='dark'] .admin-metric,
+[data-theme='dark'] .admin-distribution,
+[data-theme='dark'] .role-access-badge,
+[data-theme='dark'] .role-action-grid article:not(.role-action-primary) {
+  background: var(--surface);
+  border-color: var(--line);
+  color: var(--ink);
+  box-shadow: var(--shadow-soft);
+}
+
+[data-theme='dark'] .role-access-badge span,
+[data-theme='dark'] .role-action-grid article > span,
+[data-theme='dark'] .admin-metric span {
+  color: var(--muted);
+}
+
+[data-theme='dark'] .admin-metric strong {
+  color: var(--heading);
+}
+
+[data-theme='dark'] .role-access-badge strong {
+  color: var(--heading);
+}
+
+[data-theme='dark'] .role-action-grid article:not(.role-action-primary) a {
+  color: var(--teal);
+}
+
+[data-theme='dark'] .button-primary {
+  background: #0d9488;
+  border-color: #14b8a6;
+  color: #ffffff;
+}
+
+[data-theme='dark'] .button-primary:hover:not(:disabled) {
+  background: #0f766e;
+  border-color: #0d9488;
+}
+
+[data-theme='dark'] .button-secondary {
+  background: var(--surface-muted);
+  border-color: var(--field-line);
+  color: var(--ink);
+}
+
+[data-theme='dark'] .button-secondary:hover:not(:disabled) {
+  background: #222938;
+  border-color: #3b475e;
+}
+
+[data-theme='dark'] .danger-button {
+  background: var(--danger-soft);
+  border-color: var(--danger-line);
+  color: var(--danger-ink);
+}
+
+[data-theme='dark'] .stack-form input,
+[data-theme='dark'] .stack-form select,
+[data-theme='dark'] .stack-form textarea,
+[data-theme='dark'] .application-form input,
+[data-theme='dark'] .application-form textarea,
+[data-theme='dark'] .activation-share input,
+[data-theme='dark'] .tender-form-grid input,
+[data-theme='dark'] .tender-form-grid select,
+[data-theme='dark'] .tender-form-grid textarea {
+  background: var(--field-bg);
+  border-color: var(--field-line);
+  color: var(--ink);
+}
+
+[data-theme='dark'] .tender-form-grid label {
+  color: var(--ink);
+}
+
+[data-theme='dark'] .notice {
+  background: var(--surface-muted);
+  border-color: var(--line);
+  color: var(--ink);
+}
+
+[data-theme='dark'] .notice-error {
+  background: var(--danger-soft);
+  border-color: var(--danger-line);
+  color: var(--danger-ink);
+}
+
+[data-theme='dark'] .auth-layout {
+  background: var(--wash);
+}
+
+[data-theme='dark'] .organization-list a {
+  background: var(--surface-muted);
+  border-color: var(--line);
+}
+
+[data-theme='dark'] .organization-list a:hover {
+  background: #1f2633;
+  border-color: var(--field-line);
+}
+
+[data-theme='dark'] .member-status.is-active {
+  background: #132d27;
+  color: #34d399;
+}
+
+[data-theme='dark'] .queue-item.is-selected {
+  background: var(--surface-muted);
+}
+
+[data-theme='dark'] .status-pill.is-pending {
+  background: #332711;
+  color: #fbbf24;
+}
+
+[data-theme='dark'] .status-pill.is-approved {
+  background: #112d24;
+  color: #34d399;
+}
+
+[data-theme='dark'] .status-pill.is-rejected {
+  background: #31161b;
+  color: #f87171;
+}
+
+[data-theme='dark'] .activation-share {
+  background: var(--surface-muted);
+  border-color: var(--line);
+}
+
+[data-theme='dark'] .skeleton-line,
+[data-theme='dark'] .skeleton-cards i,
+[data-theme='dark'] .members-skeleton i,
+[data-theme='dark'] .tender-skeleton-list i {
+  background: linear-gradient(100deg, #161b26 24%, #222a3a 40%, #161b26 58%);
+  background-size: 200% 100%;
+}
+
+/* Marketing & Landing pages in Dark Mode */
+[data-theme='dark'] .enterprise-page,
+[data-theme='dark'] .workflow-page,
+[data-theme='dark'] .governance-page,
+[data-theme='dark'] .platform-page,
+[data-theme='dark'] .governance-v2 {
+  background: var(--wash);
+  color: var(--ink);
+}
+
+[data-theme='dark'] .enterprise-header {
+  border-bottom-color: var(--line);
+  background: color-mix(in srgb, #0b1927 90%, transparent);
+}
+
+[data-theme='dark'] .enterprise-header nav a,
+[data-theme='dark'] .enterprise-header-row > div > a:first-of-type {
+  color: #b7ccd9;
+}
+
+[data-theme='dark'] .enterprise-header nav a:hover,
+[data-theme='dark'] .enterprise-header nav a.is-active,
+[data-theme='dark'] .enterprise-header-row > div > a:first-of-type:hover {
+  color: var(--teal);
+}
+
+[data-theme='dark'] .enterprise-home-hero h1,
+[data-theme='dark'] .enterprise-sections h2,
+[data-theme='dark'] .enterprise-intro h1,
+[data-theme='dark'] .enterprise-operating-model h2,
+[data-theme='dark'] .workflow-hero h1,
+[data-theme='dark'] .governance-hero h1,
+[data-theme='dark'] .platform-hero h1,
+[data-theme='dark'] .platform-foundations h2,
+[data-theme='dark'] .platform-evidence h2,
+[data-theme='dark'] .workflow-timeline h2,
+[data-theme='dark'] .workflow-note h2,
+[data-theme='dark'] .governance-model h2,
+[data-theme='dark'] .governance-v2-lead h1,
+[data-theme='dark'] .governance-v2-section-head h2,
+[data-theme='dark'] .governance-v2-process h3,
+[data-theme='dark'] .governance-v2-role-grid h3 {
+  color: var(--heading);
+}
+
+[data-theme='dark'] .enterprise-home-hero h1 em,
+[data-theme='dark'] .enterprise-page .eyebrow {
+  color: var(--teal);
+}
+
+[data-theme='dark'] .enterprise-page .marketing-lede,
+[data-theme='dark'] .enterprise-summary p,
+[data-theme='dark'] .enterprise-sections p,
+[data-theme='dark'] .enterprise-intro > p:not(.eyebrow),
+[data-theme='dark'] .enterprise-operating-model > div > p:last-child,
+[data-theme='dark'] .enterprise-operating-model li p,
+[data-theme='dark'] .workflow-hero > div > p:not(.eyebrow),
+[data-theme='dark'] .governance-hero > p:not(.eyebrow),
+[data-theme='dark'] .platform-hero > div > p:not(.eyebrow),
+[data-theme='dark'] .platform-foundations p,
+[data-theme='dark'] .platform-evidence > div > p:last-child,
+[data-theme='dark'] .platform-evidence dd,
+[data-theme='dark'] .workflow-timeline p,
+[data-theme='dark'] .workflow-note > p:last-child,
+[data-theme='dark'] .governance-model-copy > p:last-child,
+[data-theme='dark'] .governance-model li p,
+[data-theme='dark'] .governance-guardrails span,
+[data-theme='dark'] .governance-v2-lead > p:not(.eyebrow),
+[data-theme='dark'] .governance-v2-section-head > p:last-child,
+[data-theme='dark'] .governance-v2-process li p,
+[data-theme='dark'] .governance-v2-role-grid p {
+  color: var(--muted);
+}
+
+[data-theme='dark'] .enterprise-page .marketing-text-link,
+[data-theme='dark'] .governance-v2-actions a:last-child {
+  color: var(--teal);
+}
+
+[data-theme='dark'] .enterprise-summary {
+  border-color: var(--line);
+  background: var(--line);
+  box-shadow: 16px 20px 0 #0d2232;
+}
+
+[data-theme='dark'] .enterprise-summary article,
+[data-theme='dark'] .platform-foundations article,
+[data-theme='dark'] .governance-v2-process li,
+[data-theme='dark'] .governance-v2-diagram {
+  background: var(--surface);
+  border-color: var(--line);
+}
+
+[data-theme='dark'] .enterprise-sections,
+[data-theme='dark'] .platform-foundations,
+[data-theme='dark'] .governance-guardrails {
+  border-color: var(--line);
+  background: var(--line);
+}
+
+[data-theme='dark'] .enterprise-sections article,
+[data-theme='dark'] .governance-guardrails div {
+  background: var(--surface-muted);
+}
+
+[data-theme='dark'] .enterprise-operating-model,
+[data-theme='dark'] .enterprise-operating-model ol,
+[data-theme='dark'] .enterprise-operating-model li,
+[data-theme='dark'] .enterprise-footer,
+[data-theme='dark'] .platform-evidence,
+[data-theme='dark'] .platform-evidence dl,
+[data-theme='dark'] .platform-evidence dl > div,
+[data-theme='dark'] .workflow-timeline,
+[data-theme='dark'] .workflow-timeline article,
+[data-theme='dark'] .governance-model,
+[data-theme='dark'] .governance-model ol,
+[data-theme='dark'] .governance-model li,
+[data-theme='dark'] .governance-v2-process,
+[data-theme='dark'] .governance-v2-roles {
+  border-color: var(--line);
+}
+
+[data-theme='dark'] .platform-structure,
+[data-theme='dark'] .governance-v2-role-grid article,
+[data-theme='dark'] .diagram-root {
+  background: var(--surface-muted);
+  border-color: var(--line);
+}
+
+[data-theme='dark'] .platform-structure strong {
+  color: var(--heading);
+}
+
+[data-theme='dark'] .diagram-branches > div {
+  border-color: var(--line);
+  background: var(--surface);
+}
+
+/* Tender surfaces in Dark Mode */
+[data-theme='dark'] .tender-stage-badge {
+  background: var(--accent-soft);
+  border-color: var(--accent-line);
+  color: var(--accent-ink);
+}
+
+[data-theme='dark'] .tender-summary {
+  background: var(--surface-muted);
+  border-color: var(--line);
+}
+
+[data-theme='dark'] .tender-summary strong,
+[data-theme='dark'] .tender-lot-code,
+[data-theme='dark'] .tender-item-no,
+[data-theme='dark'] .tender-back-link,
+[data-theme='dark'] .tender-text-button {
+  color: var(--teal);
+}
+
+[data-theme='dark'] .tender-summary span,
+[data-theme='dark'] .tender-summary p {
+  color: var(--muted);
+}
+
+[data-theme='dark'] .tender-lots .tender-lot-card {
+  background: var(--surface);
+  border-color: var(--line);
+  box-shadow: var(--shadow-soft);
+}
+
+[data-theme='dark'] .tender-lot-heading {
+  background: var(--surface-muted);
+}
+
+[data-theme='dark'] .tender-lot-heading h3,
+[data-theme='dark'] .tender-item-row strong {
+  color: var(--heading);
+}
+
+[data-theme='dark'] .tender-items-list,
+[data-theme='dark'] .tender-item-row,
+[data-theme='dark'] .tender-empty-item {
+  border-top-color: var(--line);
+}
+
+[data-theme='dark'] .tender-item-quantity {
+  color: var(--ink);
+}
+
+[data-theme='dark'] .tender-empty-lot,
+[data-theme='dark'] .tender-entry-form {
+  background: var(--surface-muted);
+  border-color: var(--accent-line);
+}
+
+[data-theme='dark'] .tender-empty-lot strong {
+  color: var(--heading);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body,
+  .theme-toggle,
+  .theme-toggle .theme-icon {
+    transition: none;
+  }
+}

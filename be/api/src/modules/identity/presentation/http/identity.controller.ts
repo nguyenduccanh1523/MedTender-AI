@@ -1,12 +1,24 @@
 import type { IncomingMessage, ServerResponse } from 'node:http'
-import { Body, Controller, Get, Header, HttpCode, Post, Req, Res, UseGuards } from '@nestjs/common'
-import { ApiCookieAuth, ApiCreatedResponse, ApiOkResponse, ApiTags } from '@nestjs/swagger'
+import { Body, Controller, Get, Header, HttpCode, Patch, Post, Req, Res, UseGuards } from '@nestjs/common'
+import { ApiCookieAuth, ApiCreatedResponse, ApiNoContentResponse, ApiOkResponse, ApiTags } from '@nestjs/swagger'
 
 import { AuthRateGuard } from './guards/auth-rate.guard'
 import { accessCookie, readSessionCookie, refreshCookie, setSessionCookies } from './session-cookies'
 import { SessionGuard, type IdentityRequest } from './guards/session.guard'
 import { WebMutationGuard } from '../../../../common/http/web-mutation.guard'
-import { activationInput, ActivateAccountDto, loginInput, LoginDto, PublicUser, registerInput, RegisterDto } from './identity.dto'
+import {
+  activationInput,
+  ActivateAccountDto,
+  changePasswordInput,
+  ChangePasswordDto,
+  loginInput,
+  LoginDto,
+  PublicUser,
+  registerInput,
+  RegisterDto,
+  updateProfileInput,
+  UpdateProfileDto,
+} from './identity.dto'
 import { IdentityService } from '../../application/identity.service'
 
 @ApiTags('identity')
@@ -74,5 +86,26 @@ export class IdentityController {
   @ApiOkResponse({ type: PublicUser })
   me(@Req() req: IdentityRequest) {
     return req.identity
+  }
+
+  @Patch('profile')
+  @UseGuards(SessionGuard, WebMutationGuard)
+  @ApiCookieAuth(accessCookie)
+  @Header('Cache-Control', 'no-store')
+  @ApiOkResponse({ type: PublicUser })
+  updateProfile(@Req() req: IdentityRequest, @Body() body: UpdateProfileDto) {
+    const input = updateProfileInput(body)
+    return this.identity.updateProfile(req.identity.id, input.name)
+  }
+
+  @Post('change-password')
+  @HttpCode(204)
+  @UseGuards(SessionGuard, WebMutationGuard)
+  @ApiCookieAuth(accessCookie)
+  @Header('Cache-Control', 'no-store')
+  @ApiNoContentResponse()
+  async changePassword(@Req() req: IdentityRequest, @Body() body: ChangePasswordDto) {
+    const input = changePasswordInput(body)
+    await this.identity.changePassword(req.identity.id, input.currentPassword, input.newPassword)
   }
 }

@@ -9,6 +9,7 @@ import { readCachedUser, clearCachedUser } from '../../auth/session-cache'
 import { clearOrganizationCache } from '../../organizations/organization-cache'
 import { ApiError } from '../../../lib/api/client'
 import { LoadingSkeleton } from '../../../components/ui/loading-skeleton'
+import { ThemeToggle } from '../../../components/theme/theme-toggle'
 import { clearResources } from '../../../lib/api/resource-cache'
 import {
   approveOrganizationApplication,
@@ -92,7 +93,7 @@ export function SystemAdminDashboard() {
   if (!items) return <LoadingSkeleton />
 
   return <>
-    <header className="admin-header"><div><p className="eyebrow">MedTender AI Control Center</p><strong>System Admin</strong></div><div className="admin-session"><span><i aria-hidden="true" /> Phiên quản trị an toàn</span><button className="button button-secondary" onClick={() => logout().then(() => { clearCachedUser(); clearOrganizationCache(); clearResources(); router.replace('/login') })}>Đăng xuất</button></div></header>
+    <header className="admin-header"><div><p className="eyebrow">MedTender AI Control Center</p><strong>System Admin</strong></div><div className="admin-session"><span><i aria-hidden="true" /> Phiên quản trị an toàn</span><ThemeToggle /><button className="button button-secondary" onClick={() => logout().then(() => { clearCachedUser(); clearOrganizationCache(); clearResources(); router.replace('/login') })}>Đăng xuất</button></div></header>
     <main className="admin-page">
       <section className="admin-dashboard-hero" aria-label="Tổng quan hệ thống">
         <div><p className="eyebrow">Tổng quan hệ thống</p><h1>Điều hành đăng ký tổ chức</h1><p>Theo dõi hồ sơ đầu vào, xác minh thông tin và cấp quyền sở hữu workspace sau khi phê duyệt.</p></div>
