@@ -157,32 +157,31 @@ export function CatalogList({ slug }: { slug: string }) {
   const hasFilters = Boolean(activeQuery || statusFilter !== 'ACTIVE')
 
   return (
-    <section className="tender-panel" aria-busy={loading}>
-      <div className="tender-panel-head">
+    <section className="surface tender-list-panel" aria-busy={loading}>
+      <div className="section-heading">
         <div>
           <p className="eyebrow">Danh mục chuẩn hóa kỹ thuật</p>
           <h2>Sản phẩm & Phiên bản thông số ({total})</h2>
           <p className="muted">
-            Mỗi sản phẩm quản lý theo SKU duy nhất khi đang hoạt động và lưu lịch sử phiên bản bất biến để phục vụ đối
-            chiếu hồ sơ thầu.
+            Quản lý thiết bị theo mã SKU duy nhất khi đang hoạt động và lưu lịch sử phiên bản bất biến để đối chiếu hồ sơ thầu.
           </p>
         </div>
-        <div className="tender-head-actions">
+        <div className="tender-list-actions">
           <button
-            className="button button-secondary button-icon"
+            className={loading ? 'tender-icon-button is-spinning' : 'tender-icon-button'}
             type="button"
             onClick={() => void loadFirstPage(activeQuery, statusFilter)}
             disabled={loading}
             aria-label="Làm mới catalog"
-            title="Làm mới danh sách"
+            title="Làm mới danh sách sản phẩm"
           >
             <svg
               viewBox="0 0 24 24"
-              width="16"
-              height="16"
+              width="17"
+              height="17"
               fill="none"
               stroke="currentColor"
-              strokeWidth="2"
+              strokeWidth="1.9"
               strokeLinecap="round"
               strokeLinejoin="round"
               aria-hidden="true"
@@ -205,20 +204,27 @@ export function CatalogList({ slug }: { slug: string }) {
         </div>
       </div>
 
-      <form className="tender-filter-bar" onSubmit={handleSearchSubmit} role="search">
-        <div className="tender-search-input">
-          <input
-            aria-label="Tìm sản phẩm catalog"
-            placeholder="Tìm theo mã SKU, tên thiết bị, hãng hoặc nhóm thiết bị..."
-            value={searchInput}
-            onChange={(event) => setSearchInput(event.target.value)}
-          />
-          <button className="button button-secondary" type="submit" disabled={loading}>
+      <form className="tender-toolbar" onSubmit={handleSearchSubmit} role="search" aria-label="Tìm kiếm và lọc sản phẩm">
+        <div className="catalog-search-group">
+          <label className="tender-search-box">
+            <span className="sr-only">Tìm sản phẩm catalog</span>
+            <input
+              type="search"
+              aria-label="Tìm sản phẩm catalog"
+              placeholder="Tìm theo mã SKU, tên thiết bị, hãng hoặc nhóm thiết bị…"
+              value={searchInput}
+              onChange={(event) => {
+                setSearchInput(event.target.value)
+                if (event.target.value === '') setActiveQuery('')
+              }}
+            />
+          </label>
+          <button className="tender-chip-button" type="submit" disabled={loading}>
             Tìm
           </button>
           {hasFilters && (
             <button
-              className="button button-secondary"
+              className="tender-text-button"
               type="button"
               onClick={resetSearch}
               disabled={loading}
@@ -227,7 +233,8 @@ export function CatalogList({ slug }: { slug: string }) {
             </button>
           )}
         </div>
-        <div className="tender-stage-filters" role="group" aria-label="Lọc theo trạng thái sản phẩm">
+
+        <div className="tender-stage-tabs" role="group" aria-label="Lọc theo trạng thái sản phẩm">
           {(
             [
               ['ACTIVE', 'Đang hoạt động'],
@@ -241,6 +248,7 @@ export function CatalogList({ slug }: { slug: string }) {
               className={
                 statusFilter === statusKey ? 'tender-filter-chip is-active' : 'tender-filter-chip'
               }
+              aria-pressed={statusFilter === statusKey}
               onClick={() => setStatusFilter(statusKey)}
             >
               {label}
@@ -250,20 +258,36 @@ export function CatalogList({ slug }: { slug: string }) {
       </form>
 
       {error && (
-        <p className="form-error" role="alert">
+        <p className="notice notice-error" role="alert">
           {error}
         </p>
       )}
 
       {creating && canWrite && (
         <form
-          className="tender-form"
+          className="tender-entry-form catalog-create-form"
           onSubmit={handleCreateProduct}
           aria-label="Tạo sản phẩm catalog mới"
         >
+          <div className="tender-entry-heading">
+            <div>
+              <strong>Khởi tạo sản phẩm mới trong Catalog</strong>
+              <p className="muted">
+                Hệ thống sẽ tự động tạo phiên bản đầu tiên (v1 · Bản nháp) theo mã Model bạn nhập bên dưới.
+              </p>
+            </div>
+            <button
+              type="button"
+              className="tender-text-button"
+              onClick={() => setCreating(false)}
+            >
+              Đóng
+            </button>
+          </div>
+
           <div className="tender-form-grid">
-            <label className="field">
-              <span>Mã SKU (duy nhất khi đang hoạt động)</span>
+            <label>
+              Mã SKU (duy nhất khi đang hoạt động)
               <input
                 required
                 maxLength={100}
@@ -272,8 +296,8 @@ export function CatalogList({ slug }: { slug: string }) {
                 placeholder="VD: MON-MINDRAY-MEC12"
               />
             </label>
-            <label className="field">
-              <span>Hãng / Thương hiệu</span>
+            <label>
+              Hãng / Thương hiệu
               <input
                 required
                 maxLength={120}
@@ -282,8 +306,8 @@ export function CatalogList({ slug }: { slug: string }) {
                 placeholder="VD: Mindray / Philips / GE Healthcare"
               />
             </label>
-            <label className="field field-wide">
-              <span>Tên thiết bị / Sản phẩm y tế</span>
+            <label className="span-2">
+              Tên thiết bị / Sản phẩm y tế
               <input
                 required
                 maxLength={200}
@@ -292,17 +316,17 @@ export function CatalogList({ slug }: { slug: string }) {
                 placeholder="VD: Monitor theo dõi bệnh nhân 5 thông số tại giường"
               />
             </label>
-            <label className="field">
-              <span>Nhà sản xuất / Xuất xứ</span>
+            <label>
+              Nhà sản xuất / Xuất xứ
               <input
                 maxLength={200}
                 value={manufacturer}
                 onChange={(event) => setManufacturer(event.target.value)}
-                placeholder="VD: Shenzhen Mindray Bio-Medical Electronics"
+                placeholder="VD: Shenzhen Mindray Bio-Medical"
               />
             </label>
-            <label className="field">
-              <span>Nhóm thiết bị</span>
+            <label>
+              Nhóm thiết bị
               <input
                 maxLength={120}
                 value={category}
@@ -310,8 +334,8 @@ export function CatalogList({ slug }: { slug: string }) {
                 placeholder="VD: Thiết bị hồi sức cấp cứu (ICU)"
               />
             </label>
-            <label className="field">
-              <span>Mã Model cho phiên bản khởi tạo (v1)</span>
+            <label>
+              Mã Model khởi tạo (v1)
               <input
                 maxLength={120}
                 value={modelCode}
@@ -319,8 +343,8 @@ export function CatalogList({ slug }: { slug: string }) {
                 placeholder="Mặc định lấy theo SKU nếu để trống"
               />
             </label>
-            <label className="field">
-              <span>Ghi chú phiên bản khởi tạo (v1)</span>
+            <label>
+              Ghi chú phiên bản (v1)
               <input
                 maxLength={2000}
                 value={notes}
@@ -329,7 +353,7 @@ export function CatalogList({ slug }: { slug: string }) {
               />
             </label>
           </div>
-          <div className="tender-form-actions">
+          <div className="tender-inline-actions">
             <button
               className="button button-secondary"
               type="button"
@@ -338,109 +362,95 @@ export function CatalogList({ slug }: { slug: string }) {
               Hủy
             </button>
             <button className="button button-primary" disabled={submitting} type="submit">
-              {submitting ? 'Đang khởi tạo...' : 'Tạo sản phẩm & Mở phiên bản v1'}
+              {submitting ? 'Đang khởi tạo…' : 'Tạo sản phẩm & Mở phiên bản v1'}
             </button>
           </div>
         </form>
       )}
 
       {loading ? (
-        <div className="tender-skeleton-list" aria-label="Đang tải danh mục sản phẩm">
+        <div className="tender-skeleton-list" aria-label="Đang tải danh mục sản phẩm" aria-busy="true">
           <i />
           <i />
           <i />
           <i />
         </div>
       ) : products.length === 0 ? (
-        <div className="tender-empty">
-          <h3>
+        <div className="tender-empty-lot catalog-empty-box">
+          <strong>
             {hasFilters
               ? 'Không tìm thấy sản phẩm phù hợp bộ lọc'
               : 'Chưa có sản phẩm nào trong Catalog của tổ chức'}
-          </h3>
+          </strong>
           <p className="muted">
             {hasFilters
               ? 'Thử đổi từ khóa tìm kiếm hoặc chuyển bộ lọc trạng thái sản phẩm.'
               : canWrite
-                ? 'Tạo sản phẩm đầu tiên để quản lý phiên bản model và thông số kỹ thuật có truy vết nguồn.'
-                : 'Liên hệ OWNER, ADMIN hoặc CATALOG_MANAGER để khởi tạo sản phẩm trong danh mục.'}
+                ? 'Nhấn "+ Thêm sản phẩm" ở góc trên bên phải để khởi tạo thiết bị và quản lý phiên bản thông số kỹ thuật.'
+                : 'Vai trò của bạn là chỉ xem Catalog. Liên hệ OWNER, ADMIN hoặc CATALOG_MANAGER để khởi tạo sản phẩm trong danh mục.'}
           </p>
         </div>
       ) : (
         <>
-          <div className="tender-grid">
+          <ul className="organization-list tender-cards-list">
             {products.map((product) => {
               const activeVer = product.publishedVersion ?? product.latestVersion
               const conflictCount = activeVer?.conflictCount ?? 0
               return (
-                <article key={product.id} className="tender-card catalog-product-card">
-                  <div>
-                    <div className="tender-card-meta">
-                      <span className="tender-code">{product.sku}</span>
-                      <span className="tender-stage-pill">{product.brand}</span>
-                      {product.category && (
-                        <span className="catalog-category-pill">{product.category}</span>
-                      )}
-                      <span
-                        className={
-                          product.status === 'ACTIVE'
-                            ? 'catalog-status-pill is-published'
-                            : 'catalog-status-pill is-superseded'
-                        }
-                      >
-                        {product.status === 'ACTIVE' ? 'Đang hoạt động' : 'Đã lưu trữ'}
-                      </span>
+                <li key={product.id}>
+                  <Link href={`/${slug}/catalog/${product.id}`} className="tender-list-card catalog-list-card">
+                    <div className="tender-list-card-main">
+                      <div className="catalog-card-badges">
+                        <span className="tender-lot-code">{product.sku}</span>
+                        <span className="tender-stage-badge">{product.brand}</span>
+                        {product.category && (
+                          <span className="catalog-category-pill">{product.category}</span>
+                        )}
+                        <span
+                          className={
+                            product.status === 'ACTIVE'
+                              ? 'catalog-status-pill is-published'
+                              : 'catalog-status-pill is-superseded'
+                          }
+                        >
+                          {product.status === 'ACTIVE' ? 'Đang hoạt động' : 'Đã lưu trữ'}
+                        </span>
+                        {conflictCount > 0 && (
+                          <span className="catalog-conflict-badge">
+                            ⚠ {conflictCount} thông số xung đột nguồn
+                          </span>
+                        )}
+                      </div>
+                      <strong>{product.name}</strong>
+                      <small className="tender-list-card-meta">
+                        {product.publishedVersion
+                          ? `Phiên bản chuẩn: ${product.publishedVersion.versionLabel} · Model: ${product.publishedVersion.modelCode}`
+                          : product.latestVersion
+                            ? `Đang soạn thảo: ${product.latestVersion.versionLabel} (${versionStatusLabels[product.latestVersion.status]}) · Model: ${product.latestVersion.modelCode}`
+                            : 'Chưa có phiên bản'}
+                      </small>
                     </div>
-                    <h3>
-                      <Link href={`/${slug}/catalog/${product.id}`}>{product.name}</Link>
-                    </h3>
-                    <div className="catalog-version-strip">
-                      {product.publishedVersion ? (
-                        <span className="catalog-version-tag is-published">
-                          Phiên bản chuẩn: <strong>{product.publishedVersion.versionLabel}</strong> · Model{' '}
-                          <code>{product.publishedVersion.modelCode}</code>
-                        </span>
-                      ) : product.latestVersion ? (
-                        <span className="catalog-version-tag is-draft">
-                          Đang soạn thảo: <strong>{product.latestVersion.versionLabel}</strong> (
-                          {versionStatusLabels[product.latestVersion.status]}) · Model{' '}
-                          <code>{product.latestVersion.modelCode}</code>
-                        </span>
-                      ) : null}
-                      {conflictCount > 0 && (
-                        <span className="catalog-conflict-badge" title="Có thông số xung đột giữa các nguồn">
-                          ⚠ {conflictCount} thông số xung đột nguồn
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                  <div className="tender-card-stats">
-                    <span>
-                      <strong>{product.versionCount}</strong> phiên bản
+                    <span className="tender-list-card-counts">
+                      {product.versionCount} phiên bản · {activeVer?.specificationCount ?? 0} thông số
                     </span>
-                    <span>
-                      <strong>{activeVer?.specificationCount ?? 0}</strong> thông số
-                    </span>
-                    <Link className="tender-open-link" href={`/${slug}/catalog/${product.id}`}>
-                      Mở phiên bản →
-                    </Link>
-                  </div>
-                </article>
+                  </Link>
+                </li>
               )
             })}
-          </div>
+          </ul>
 
           {nextCursor && (
-            <div className="tender-pagination">
+            <div className="tender-pagination-bar">
+              <span className="muted">
+                Đang hiển thị {products.length} / {total} sản phẩm
+              </span>
               <button
                 className="button button-secondary"
                 type="button"
                 disabled={loadingMore}
                 onClick={handleLoadMore}
               >
-                {loadingMore
-                  ? 'Đang tải thêm...'
-                  : `Tải thêm sản phẩm (${products.length}/${total})`}
+                {loadingMore ? 'Đang tải thêm…' : 'Tải thêm sản phẩm'}
               </button>
             </div>
           )}

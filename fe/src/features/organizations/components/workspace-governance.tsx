@@ -1,5 +1,6 @@
 'use client'
 
+import Link from 'next/link'
 import { useCallback, useEffect, useState, type FormEvent } from 'react'
 
 import { ApiError } from '../../../lib/api/client'
@@ -24,9 +25,26 @@ const assignableRolesByOwner: Array<Exclude<Organization['role'], 'OWNER'>> = [
 ]
 
 const classificationLabels: Record<'INTERNAL' | 'CONFIDENTIAL' | 'RESTRICTED', string> = {
-  INTERNAL: 'Nội bộ (INTERNAL) — Tiêu chuẩn vận hành trong tổ chức',
-  CONFIDENTIAL: 'Bảo mật cao (CONFIDENTIAL) — Hồ sơ E-HSMT & giá dự thầu nhạy cảm',
-  RESTRICTED: 'Hạn chế tối đa (RESTRICTED) — Yêu cầu kiểm soát nghiêm ngặt',
+  INTERNAL: 'Nội bộ (INTERNAL) — Tài liệu vận hành tiêu chuẩn trong tổ chức',
+  CONFIDENTIAL: 'Bảo mật cao (CONFIDENTIAL) — Hồ sơ E-HSMT, thông số & báo giá nhạy cảm',
+  RESTRICTED: 'Tuyệt mật / Hạn chế tối đa (RESTRICTED) — Chỉ nhân sự được chỉ định mới được xem',
+}
+
+type GovernanceTab = 'policy' | 'members' | 'audits'
+type AuditScopeFilter = 'ALL' | 'ORG' | 'CATALOG' | 'TENDER'
+
+const auditScopeLabels: Record<AuditScopeFilter, string> = {
+  ALL: 'Tất cả bản ghi',
+  ORG: 'Tổ chức & Phân quyền',
+  CATALOG: 'Catalog & Phiên bản',
+  TENDER: 'Hồ sơ thầu / Lot / Item',
+}
+
+function matchAuditScope(action: string, scope: AuditScopeFilter) {
+  if (scope === 'ALL') return true
+  if (scope === 'ORG') return action.startsWith('ORG_')
+  if (scope === 'CATALOG') return action.startsWith('CATALOG_')
+  return action.startsWith('TENDER_') || action.startsWith('LOT_') || action.startsWith('ITEM_')
 }
 
 export function WorkspaceGovernanceView({ slug }: { slug: string }) {
@@ -37,6 +55,7 @@ export function WorkspaceGovernanceView({ slug }: { slug: string }) {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
+  const [activeTab, setActiveTab] = useState<GovernanceTab>('policy')
   const [orgName, setOrgName] = useState('')
   const [requireReviewer, setRequireReviewer] = useState(true)
   const [classification, setClassification] = useState<'INTERNAL' | 'CONFIDENTIAL' | 'RESTRICTED'>(
@@ -45,6 +64,10 @@ export function WorkspaceGovernanceView({ slug }: { slug: string }) {
   const [savingPolicy, setSavingPolicy] = useState(false)
   const [policyNotice, setPolicyNotice] = useState<string | null>(null)
   const [memberSavingId, setMemberSavingId] = useState<string | null>(null)
+
+  const [auditScope, setAuditScope] = useState<AuditScopeFilter>('ALL')
+  const [auditLimit, setAuditLimit] = useState(10)
+  const [auditPage, setAuditPage] = useState(1)
 
   const load = useCallback(async () => {
     if (!isOwner) {
@@ -109,7 +132,7 @@ export function WorkspaceGovernanceView({ slug }: { slug: string }) {
 
   if (loading && !data) {
     return (
-      <section className="tender-panel" aria-busy="true">
+      <section className="surface tender-list-panel" aria-busy="true">
         <div className="tender-skeleton-list" aria-label="Đang tải cấu hình quản trị tổ chức">
           <i />
           <i />
@@ -122,8 +145,8 @@ export function WorkspaceGovernanceView({ slug }: { slug: string }) {
 
   if (error || !data) {
     return (
-      <section className="tender-panel">
-        <p className="form-error" role="alert">
+      <section className="surface tender-list-panel">
+        <p className="notice notice-error" role="alert">
           {error ?? 'Không thể hiển thị cấu hình quản trị tổ chức.'}
         </p>
         <button className="button button-secondary" type="button" onClick={() => void load()}>
@@ -175,6 +198,14 @@ export function WorkspaceGovernanceView({ slug }: { slug: string }) {
     }
   }
 
+  const filteredAudits = data.recentAudits.filter((entry) =>
+    matchAuditScope(entry.action, auditScope),
+  )
+  const totalAuditPages = Math.max(1, Math.ceil(filteredAudits.length / auditLimit))
+  const safeAuditPage = Math.min(auditPage, totalAuditPages)
+  const auditStartIndex = (safeAuditPage - 1) * auditLimit
+  const visibleAudits = filteredAudits.slice(auditStartIndex, auditStartIndex + auditLimit)
+
   return (
     <div className="governance-dashboard">
       <section className="activity-role-banner">
@@ -185,14 +216,14 @@ export function WorkspaceGovernanceView({ slug }: { slug: string }) {
           </div>
           <h2>Quản trị cấu trúc tổ chức, chính sách tuân thủ & phân quyền ADMIN</h2>
           <p>
-            Không gian này chỉ hiển thị với <strong>Chủ sở hữu (OWNER)</strong>. Tại đây bạn kiểm soát tên pháp
-            nhân hiển thị, quy tắc bắt buộc thẩm định độc lập, phân loại bảo mật dữ liệu và bổ nhiệm hoặc thu hồi
-            quyền của Quản trị viên (ADMIN).
+            Không gian này chỉ hiển thị với <strong>Chủ sở hữu (OWNER)</strong>. Tại đây bạn thiết lập quy chuẩn
+            pháp nhân/tuân thủ của tổ chức, bổ nhiệm hoặc hạ quyền Quản trị viên (ADMIN) và tra cứu bảng kiểm toán
+            toàn tổ chức.
           </p>
         </div>
         <div className="activity-role-banner-actions">
           <button
-            className="button button-secondary button-icon"
+            className={loading ? 'tender-icon-button is-spinning' : 'tender-icon-button'}
             type="button"
             onClick={() => void load()}
             disabled={loading}
@@ -220,7 +251,7 @@ export function WorkspaceGovernanceView({ slug }: { slug: string }) {
       </section>
 
       {error && (
-        <p className="form-error" role="alert">
+        <p className="notice notice-error" role="alert">
           {error}
         </p>
       )}
@@ -230,22 +261,81 @@ export function WorkspaceGovernanceView({ slug }: { slug: string }) {
         </p>
       )}
 
-      <div className="governance-grid">
-        <section className="tender-panel">
-          <div className="tender-panel-head">
+      <div className="tender-subtabs-bar">
+        <div className="tender-subtabs" role="tablist" aria-label="Chế độ quản trị tổ chức">
+          <button
+            type="button"
+            role="tab"
+            aria-selected={activeTab === 'policy'}
+            className={activeTab === 'policy' ? 'tender-subtab is-active' : 'tender-subtab'}
+            onClick={() => setActiveTab('policy')}
+          >
+            Chính sách & Pháp nhân
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={activeTab === 'members'}
+            className={activeTab === 'members' ? 'tender-subtab is-active' : 'tender-subtab'}
+            onClick={() => setActiveTab('members')}
+          >
+            Bổ nhiệm & Phân quyền ADMIN
+            <span className="tender-subtab-badge">{data.members.length}</span>
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={activeTab === 'audits'}
+            className={activeTab === 'audits' ? 'tender-subtab is-active' : 'tender-subtab'}
+            onClick={() => setActiveTab('audits')}
+          >
+            Kiểm toán cấp Tổ chức
+            <span className="tender-subtab-badge">{data.recentAudits.length}</span>
+          </button>
+        </div>
+      </div>
+
+      {activeTab === 'policy' && (
+        <section className="surface tender-list-panel" aria-label="Cấu hình pháp nhân và chính sách">
+          <div className="tender-entry-heading">
             <div>
-              <p className="eyebrow">Cấu hình Pháp nhân & Chính sách</p>
-              <h2>Định danh tổ chức & Quy tắc kiểm soát</h2>
+              <strong>Cấu hình Pháp nhân & Chính sách Tuân thủ của Tổ chức</strong>
               <p className="muted">
-                Mã định danh tenant: <code>{data.slug}</code> · Trạng thái: <strong>{data.status}</strong>
+                Mã định danh hệ thống (slug): <code>{data.slug}</code> · Trạng thái tổ chức:{' '}
+                <strong>{data.status}</strong>
               </p>
             </div>
           </div>
 
-          <form className="tender-form" onSubmit={handleSavePolicy}>
+          <div className="governance-explainer-grid">
+            <article className="governance-explainer-card">
+              <span>1. Định danh pháp nhân là gì?</span>
+              <p>
+                Là tên chính thức của Bệnh viện hoặc Công ty cung ứng thiết bị y tế. Tên này xuất hiện trên thanh
+                Header, email mời thành viên và tiêu đề pháp lý của các bản báo cáo đối chiếu hồ sơ thầu.
+              </p>
+            </article>
+            <article className="governance-explainer-card">
+              <span>2. Phân loại bảo mật dữ liệu dùng để làm gì?</span>
+              <p>
+                Quy định nhãn bảo mật mặc định khi nhân sự tải E-HSMT, báo giá hoặc CFS lên workspace. Ở mức{' '}
+                <strong>CONFIDENTIAL</strong> hoặc <strong>RESTRICTED</strong>, hệ thống khóa cứng không cho gửi dữ
+                liệu ra mô hình AI bên ngoài.
+              </p>
+            </article>
+            <article className="governance-explainer-card">
+              <span>3. Bắt buộc REVIEWER độc lập (Nguyên tắc 4 mắt)</span>
+              <p>
+                Chống rủi ro tự biên tự diễn trong đấu thầu: người lập phân tích kỹ thuật (Analyst) không được tự bấm
+                duyệt kết quả của chính mình mà phải có một <strong>Reviewer độc lập</strong> kiểm tra chéo.
+              </p>
+            </article>
+          </div>
+
+          <form className="tender-entry-form" onSubmit={handleSavePolicy} style={{ marginTop: '1rem' }}>
             <div className="tender-form-grid">
-              <label className="field field-wide">
-                <span>Tên hiển thị của tổ chức / bệnh viện / nhà thầu</span>
+              <label className="span-2">
+                Tên hiển thị của tổ chức / bệnh viện / nhà thầu
                 <input
                   required
                   minLength={2}
@@ -255,8 +345,8 @@ export function WorkspaceGovernanceView({ slug }: { slug: string }) {
                 />
               </label>
 
-              <label className="field field-wide">
-                <span>Mức phân loại bảo mật dữ liệu mặc định</span>
+              <label className="span-2">
+                Mức phân loại bảo mật dữ liệu mặc định cho hồ sơ & tài liệu mới
                 <select
                   value={classification}
                   onChange={(event) =>
@@ -273,16 +363,17 @@ export function WorkspaceGovernanceView({ slug }: { slug: string }) {
                 </select>
               </label>
 
-              <label className="governance-checkbox-field field-wide">
+              <label className="governance-checkbox-field span-2">
                 <input
                   type="checkbox"
                   checked={requireReviewer}
                   onChange={(event) => setRequireReviewer(event.target.checked)}
                 />
                 <div>
-                  <strong>Bắt buộc thẩm định độc lập bởi REVIEWER trước khi chốt hồ sơ</strong>
+                  <strong>Bắt buộc thẩm định độc lập bởi REVIEWER trước khi phê duyệt hồ sơ (Khuyên dùng)</strong>
                   <p className="muted">
-                    Đảm bảo nguyên tắc 4 mắt (Four-Eyes Principle): người lập phân tích không thể tự phê duyệt kết quả.
+                    Đảm bảo tính khách quan: chỉ REVIEWER không tham gia chỉnh sửa bản phân tích mới được quyền bấm
+                    Approve xuất báo cáo chính thức.
                   </p>
                 </div>
               </label>
@@ -294,141 +385,252 @@ export function WorkspaceGovernanceView({ slug }: { slug: string }) {
                 <strong>{data.settings.externalAiPolicy} (Khóa cứng bảo mật)</strong>
               </div>
               <div className="governance-guardrail-item">
-                <span>Giới hạn cấu trúc Hồ sơ thầu</span>
+                <span>Hạn mức mỗi Hồ sơ thầu</span>
                 <strong>
                   {data.settings.maxLotsPerTender} Lot / {data.settings.maxItemsPerTender} Item
                 </strong>
               </div>
               <div className="governance-guardrail-item">
-                <span>Giới hạn thông số mỗi Phiên bản Catalog</span>
+                <span>Hạn mức mỗi Phiên bản Catalog</span>
                 <strong>{data.settings.maxSpecsPerVersion} thông số kỹ thuật</strong>
               </div>
             </div>
 
-            <div className="tender-form-actions">
+            <div className="tender-inline-actions" style={{ marginTop: '.85rem' }}>
               <button className="button button-primary" disabled={savingPolicy} type="submit">
-                {savingPolicy ? 'Đang lưu chính sách...' : 'Lưu chính sách tổ chức'}
+                {savingPolicy ? 'Đang lưu chính sách…' : 'Lưu chính sách tổ chức'}
               </button>
             </div>
           </form>
         </section>
+      )}
 
-        <section className="tender-panel">
-          <div className="tender-panel-head">
+      {activeTab === 'members' && (
+        <section className="surface tender-list-panel" aria-label="Kiểm soát vai trò và trạng thái thành viên">
+          <div className="tender-entry-heading">
             <div>
-              <p className="eyebrow">Quản trị Cấp cao · Bổ nhiệm & Hạ quyền ADMIN</p>
-              <h2>Kiểm soát vai trò & Trạng thái thành viên ({data.members.length})</h2>
+              <strong>Bổ nhiệm / Hạ quyền ADMIN & Quản lý trạng thái thành viên ({data.members.length})</strong>
               <p className="muted">
                 Chỉ <strong>OWNER</strong> mới có quyền thăng cấp thành viên lên <strong>ADMIN</strong>, chuyển đổi
-                vai trò của <strong>ADMIN</strong> hoặc tạm khóa tài khoản trong tổ chức.
+                vai trò của <strong>ADMIN</strong> sang role nghiệp vụ hoặc tạm khóa tài khoản trong tổ chức.
               </p>
             </div>
           </div>
 
-          <div className="governance-member-list">
-            {data.members.map((member) => {
-              const isTargetOwner = member.role === 'OWNER'
-              const isBusy = memberSavingId === member.userId
-              return (
-                <article key={member.userId} className="governance-member-row">
-                  <div className="governance-member-info">
-                    <strong>{member.name}</strong>
-                    <div className="governance-member-badges">
-                      <span className="tender-stage-pill">{roleLabels[member.role]}</span>
-                      <span
-                        className={
-                          member.status === 'ACTIVE'
-                            ? 'catalog-status-pill is-published'
-                            : 'catalog-status-pill is-superseded'
-                        }
-                      >
-                        {member.status === 'ACTIVE' ? 'Đang hoạt động' : 'Đã tạm khóa'}
-                      </span>
-                    </div>
-                  </div>
-
-                  {isTargetOwner ? (
-                    <span className="muted">Chủ sở hữu tối cao (Cố định)</span>
-                  ) : (
-                    <div className="governance-member-controls">
-                      <label className="tender-inline-control">
-                        <span>Vai trò</span>
-                        <select
-                          aria-label={`Vai trò của ${member.name}`}
-                          disabled={isBusy}
-                          value={member.role}
-                          onChange={(event) =>
-                            void handleMemberUpdate(member.userId, {
-                              role: event.target.value as Organization['role'],
-                            })
+          <div className="governance-table-wrap">
+            <table className="governance-table" aria-label="Bảng phân quyền thành viên cấp cao">
+              <thead>
+                <tr>
+                  <th>Thành viên</th>
+                  <th>Vai trò hiện tại</th>
+                  <th>Trạng thái</th>
+                  <th>Thao tác của OWNER</th>
+                </tr>
+              </thead>
+              <tbody>
+                {data.members.map((member) => {
+                  const isTargetOwner = member.role === 'OWNER'
+                  const isBusy = memberSavingId === member.userId
+                  return (
+                    <tr key={member.userId}>
+                      <td>
+                        <strong>{member.name}</strong>
+                      </td>
+                      <td>
+                        <span className="tender-stage-badge">{roleLabels[member.role]}</span>
+                      </td>
+                      <td>
+                        <span
+                          className={
+                            member.status === 'ACTIVE'
+                              ? 'catalog-status-pill is-published'
+                              : 'catalog-status-pill is-superseded'
                           }
                         >
-                          {assignableRolesByOwner.map((r) => (
-                            <option key={r} value={r}>
-                              {roleLabels[r]} ({r})
-                            </option>
-                          ))}
-                        </select>
-                      </label>
+                          {member.status === 'ACTIVE' ? 'Đang hoạt động' : 'Đã tạm khóa'}
+                        </span>
+                      </td>
+                      <td>
+                        {isTargetOwner ? (
+                          <span className="muted">Chủ sở hữu tối cao (Cố định)</span>
+                        ) : (
+                          <div className="governance-member-controls">
+                            <select
+                              aria-label={`Vai trò của ${member.name}`}
+                              className="governance-role-select"
+                              disabled={isBusy}
+                              value={member.role}
+                              onChange={(event) =>
+                                void handleMemberUpdate(member.userId, {
+                                  role: event.target.value as Organization['role'],
+                                })
+                              }
+                            >
+                              {assignableRolesByOwner.map((r) => (
+                                <option key={r} value={r}>
+                                  {roleLabels[r]} ({r})
+                                </option>
+                              ))}
+                            </select>
 
-                      <button
-                        className={
-                          member.status === 'ACTIVE'
-                            ? 'button button-danger'
-                            : 'button button-secondary'
-                        }
-                        disabled={isBusy}
-                        type="button"
-                        onClick={() =>
-                          void handleMemberUpdate(member.userId, {
-                            status: member.status === 'ACTIVE' ? 'DISABLED' : 'ACTIVE',
-                          })
-                        }
-                      >
-                        {member.status === 'ACTIVE' ? 'Tạm khóa' : 'Kích hoạt lại'}
-                      </button>
-                    </div>
-                  )}
-                </article>
-              )
-            })}
+                            <button
+                              className={
+                                member.status === 'ACTIVE'
+                                  ? 'tender-chip-button is-danger-chip'
+                                  : 'tender-chip-button'
+                              }
+                              disabled={isBusy}
+                              type="button"
+                              onClick={() =>
+                                void handleMemberUpdate(member.userId, {
+                                  status: member.status === 'ACTIVE' ? 'DISABLED' : 'ACTIVE',
+                                })
+                              }
+                            >
+                              {member.status === 'ACTIVE' ? 'Tạm khóa' : 'Kích hoạt lại'}
+                            </button>
+                          </div>
+                        )}
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
           </div>
         </section>
-      </div>
+      )}
 
-      <section className="tender-panel">
-        <div className="tender-panel-head">
-          <div>
-            <p className="eyebrow">Kiểm toán cấp Tổ chức</p>
-            <h2>Nhật ký điều hành & Thay đổi trọng yếu</h2>
-            <p className="muted">
-              Tổng hợp các sự kiện thay đổi chính sách tổ chức, phân quyền thành viên, xuất bản phiên bản catalog và
-              thao tác trên hồ sơ thầu.
-            </p>
+      {activeTab === 'audits' && (
+        <section className="surface tender-audit-panel" aria-label="Bảng kiểm toán cấp tổ chức">
+          <div className="tender-entry-heading">
+            <div>
+              <strong>Bảng Kiểm toán cấp Tổ chức (Organization Audit Log)</strong>
+              <p className="muted">
+                Tổng hợp minh bạch mọi sự kiện thay đổi chính sách tổ chức, phân quyền thành viên, xuất bản phiên bản
+                catalog và thao tác trên hồ sơ thầu.
+              </p>
+            </div>
           </div>
-        </div>
 
-        {data.recentAudits.length === 0 ? (
-          <p className="muted">Chưa có bản ghi kiểm toán nào trong tổ chức.</p>
-        ) : (
-          <ol className="tender-audit-list" aria-label="Nhật ký kiểm toán cấp tổ chức">
-            {data.recentAudits.map((entry) => (
-              <li key={entry.id}>
-                <div>
-                  <span className="tender-code">{entry.action}</span>
-                  <strong>{entry.summary}</strong>
-                  <span className="muted">
-                    Thực hiện bởi {entry.actorName} ({roleLabels[entry.actorRole]})
+          <div className="tender-audit-toolbar" role="region" aria-label="Bộ lọc kiểm toán tổ chức">
+            <div className="tender-stage-tabs" role="group" aria-label="Phạm vi kiểm toán">
+              {(['ALL', 'ORG', 'CATALOG', 'TENDER'] as AuditScopeFilter[]).map((scope) => (
+                <button
+                  key={scope}
+                  type="button"
+                  className={
+                    auditScope === scope ? 'tender-filter-chip is-active' : 'tender-filter-chip'
+                  }
+                  onClick={() => {
+                    setAuditScope(scope)
+                    setAuditPage(1)
+                  }}
+                >
+                  {auditScopeLabels[scope]}
+                </button>
+              ))}
+            </div>
+
+            <label className="tender-audit-limit-control">
+              <span>Hiển thị</span>
+              <select
+                aria-label="Số dòng kiểm toán mỗi trang"
+                value={String(auditLimit)}
+                onChange={(event) => {
+                  setAuditLimit(Number(event.target.value))
+                  setAuditPage(1)
+                }}
+              >
+                <option value="5">5 dòng / trang</option>
+                <option value="10">10 dòng / trang</option>
+                <option value="20">20 dòng / trang</option>
+              </select>
+            </label>
+          </div>
+
+          {visibleAudits.length === 0 ? (
+            <p className="muted" style={{ marginTop: '.75rem' }}>
+              Chưa có bản ghi kiểm toán nào phù hợp với bộ lọc hiện tại.
+            </p>
+          ) : (
+            <>
+              <div className="governance-table-wrap">
+                <table className="governance-table governance-audit-table" aria-label="Nhật ký kiểm toán cấp tổ chức">
+                  <thead>
+                    <tr>
+                      <th>Thời gian</th>
+                      <th>Mã sự kiện</th>
+                      <th>Nội dung thay đổi chi tiết</th>
+                      <th>Người thực hiện</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {visibleAudits.map((entry) => (
+                      <tr key={entry.id}>
+                        <td className="governance-audit-time">
+                          <time dateTime={String(entry.createdAt)}>
+                            {new Date(entry.createdAt).toLocaleString('vi-VN')}
+                          </time>
+                        </td>
+                        <td className="governance-audit-code">
+                          <span className="tender-lot-code">{entry.action}</span>
+                        </td>
+                        <td className="governance-audit-summary">
+                          <strong>{entry.summary}</strong>
+                          {entry.href && (
+                            <>
+                              {' '}
+                              <Link className="activity-timeline-link" href={entry.href}>
+                                Mở chi tiết →
+                              </Link>
+                            </>
+                          )}
+                        </td>
+                        <td className="governance-audit-actor">
+                          <strong>{entry.actorName}</strong>
+                          <small className="muted">{roleLabels[entry.actorRole]}</small>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              <div className="tender-audit-pagination" aria-label="Phân trang kiểm toán">
+                <span className="muted">
+                  Hiển thị{' '}
+                  <strong>
+                    {auditStartIndex + 1}–{auditStartIndex + visibleAudits.length}
+                  </strong>{' '}
+                  trên tổng <strong>{filteredAudits.length}</strong> bản ghi
+                </span>
+                <div className="tender-audit-page-controls">
+                  <button
+                    type="button"
+                    className="tender-chip-button"
+                    disabled={safeAuditPage <= 1}
+                    onClick={() => setAuditPage((prev) => Math.max(1, prev - 1))}
+                  >
+                    ← Trang trước
+                  </button>
+                  <span className="tender-audit-page-indicator">
+                    Trang {safeAuditPage} / {totalAuditPages}
                   </span>
+                  <button
+                    type="button"
+                    className="tender-chip-button"
+                    disabled={safeAuditPage >= totalAuditPages}
+                    onClick={() => setAuditPage((prev) => Math.min(totalAuditPages, prev + 1))}
+                  >
+                    Trang sau →
+                  </button>
                 </div>
-                <time dateTime={String(entry.createdAt)}>
-                  {new Date(entry.createdAt).toLocaleString('vi-VN')}
-                </time>
-              </li>
-            ))}
-          </ol>
-        )}
-      </section>
+              </div>
+            </>
+          )}
+        </section>
+      )}
     </div>
   )
 }

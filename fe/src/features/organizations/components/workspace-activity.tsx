@@ -18,7 +18,7 @@ const roleOperationalMeta: Record<
 > = {
   OWNER: {
     badge: 'ĐIỀU HÀNH CẤP CAO · OWNER',
-    headline: ' Trung tâm chỉ huy & Giám sát toàn diện tổ chức',
+    headline: 'Trung tâm chỉ huy & Giám sát toàn diện tổ chức',
     mandate:
       'Theo dõi sức khỏe vận hành toàn workspace, kiểm soát phân quyền ADMIN, chuẩn hóa chính sách bảo mật và rà soát nhật ký kiểm toán.',
     focusPill: 'Quản trị cấu trúc · Phân quyền ADMIN · Nhật ký kiểm toán',
@@ -73,10 +73,33 @@ const priorityLabels: Record<'HIGH' | 'MEDIUM' | 'INFO', { label: string; classN
   INFO: { label: 'Theo dõi thường xuyên', className: 'is-info' },
 }
 
+type LogScopeFilter = 'ALL' | 'TENDER' | 'CATALOG' | 'ORG'
+
+const logScopeLabels: Record<LogScopeFilter, string> = {
+  ALL: 'Tất cả sự kiện',
+  TENDER: 'Hồ sơ thầu / Lot / Item',
+  CATALOG: 'Catalog & Phiên bản',
+  ORG: 'Tổ chức & Nhân sự',
+}
+
+function matchLogScope(action: string, scope: LogScopeFilter) {
+  if (scope === 'ALL') return true
+  if (scope === 'CATALOG') return action.startsWith('CATALOG_')
+  if (scope === 'ORG') return action.startsWith('ORG_')
+  return (
+    action.startsWith('TENDER_') || action.startsWith('LOT_') || action.startsWith('ITEM_')
+  )
+}
+
 export function WorkspaceActivityView({ slug }: { slug: string }) {
   const [data, setData] = useState<WorkspaceActivity | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+
+  const [activeSubtab, setActiveSubtab] = useState<'queue' | 'logs'>('queue')
+  const [logScope, setLogScope] = useState<LogScopeFilter>('ALL')
+  const [logLimit, setLogLimit] = useState(10)
+  const [logPage, setLogPage] = useState(1)
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -115,7 +138,7 @@ export function WorkspaceActivityView({ slug }: { slug: string }) {
 
   if (loading && !data) {
     return (
-      <section className="tender-panel" aria-busy="true">
+      <section className="surface tender-list-panel" aria-busy="true">
         <div className="tender-skeleton-list" aria-label="Đang tải hoạt động theo vai trò">
           <i />
           <i />
@@ -128,8 +151,8 @@ export function WorkspaceActivityView({ slug }: { slug: string }) {
 
   if (error || !data) {
     return (
-      <section className="tender-panel">
-        <p className="form-error" role="alert">
+      <section className="surface tender-list-panel">
+        <p className="notice notice-error" role="alert">
           {error ?? 'Không thể hiển thị bảng hoạt động.'}
         </p>
         <button className="button button-secondary" type="button" onClick={() => void load()}>
@@ -244,6 +267,12 @@ export function WorkspaceActivityView({ slug }: { slug: string }) {
               },
             ]
 
+  const filteredLogs = data.timeline.filter((item) => matchLogScope(item.action, logScope))
+  const totalLogPages = Math.max(1, Math.ceil(filteredLogs.length / logLimit))
+  const safeLogPage = Math.min(logPage, totalLogPages)
+  const logStartIndex = (safeLogPage - 1) * logLimit
+  const visibleLogs = filteredLogs.slice(logStartIndex, logStartIndex + logLimit)
+
   return (
     <div className="activity-dashboard">
       <section className="activity-role-banner">
@@ -262,7 +291,7 @@ export function WorkspaceActivityView({ slug }: { slug: string }) {
             </Link>
           )}
           <button
-            className="button button-secondary button-icon"
+            className={loading ? 'tender-icon-button is-spinning' : 'tender-icon-button'}
             type="button"
             onClick={() => void load()}
             disabled={loading}
@@ -302,12 +331,36 @@ export function WorkspaceActivityView({ slug }: { slug: string }) {
         ))}
       </section>
 
-      <div className="activity-main-grid">
-        <section className="tender-panel activity-queue-panel">
-          <div className="tender-panel-head">
+      <div className="tender-subtabs-bar">
+        <div className="tender-subtabs" role="tablist" aria-label="Chế độ xem hoạt động">
+          <button
+            type="button"
+            role="tab"
+            aria-selected={activeSubtab === 'queue'}
+            className={activeSubtab === 'queue' ? 'tender-subtab is-active' : 'tender-subtab'}
+            onClick={() => setActiveSubtab('queue')}
+          >
+            Hàng đợi công việc
+            <span className="tender-subtab-badge">{data.workQueue.length}</span>
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={activeSubtab === 'logs'}
+            className={activeSubtab === 'logs' ? 'tender-subtab is-active' : 'tender-subtab'}
+            onClick={() => setActiveSubtab('logs')}
+          >
+            Nhật ký sự kiện (Log)
+            <span className="tender-subtab-badge">{data.timeline.length}</span>
+          </button>
+        </div>
+      </div>
+
+      {activeSubtab === 'queue' ? (
+        <section className="surface tender-list-panel" aria-label="Hàng đợi công việc">
+          <div className="tender-entry-heading">
             <div>
-              <p className="eyebrow">Hàng đợi tác nghiệp · {roleLabels[data.role]}</p>
-              <h2>Công việc đề xuất theo trách nhiệm của bạn</h2>
+              <strong>Công việc đề xuất theo trách nhiệm ({roleLabels[data.role]})</strong>
               <p className="muted">
                 Danh sách tác vụ được tổng hợp trực tiếp từ trạng thái thực tế của hồ sơ thầu, catalog và đội ngũ.
               </p>
@@ -338,55 +391,118 @@ export function WorkspaceActivityView({ slug }: { slug: string }) {
             })}
           </div>
         </section>
-
-        <section className="tender-panel activity-timeline-panel">
-          <div className="tender-panel-head">
+      ) : (
+        <section className="surface tender-audit-panel" aria-label="Nhật ký sự kiện vận hành">
+          <div className="tender-entry-heading">
             <div>
-              <p className="eyebrow">Dòng sự kiện vận hành</p>
-              <h2>Nhật ký hoạt động gần đây</h2>
+              <strong>Nhật ký sự kiện vận hành gần đây</strong>
               <p className="muted">
-                Các thao tác nghiệp vụ mới nhất trên hồ sơ thầu, phiên bản sản phẩm và cấu hình tổ chức.
+                Theo dõi dạng log gọn gàng các thao tác nghiệp vụ mới nhất trên hồ sơ thầu, phiên bản sản phẩm và tổ chức.
               </p>
             </div>
           </div>
 
-          {data.timeline.length === 0 ? (
-            <div className="tender-empty">
-              <h3>Chưa có sự kiện nào được ghi nhận</h3>
-              <p className="muted">
-                Khi các thành viên khởi tạo hồ sơ thầu hoặc xuất bản phiên bản catalog, dòng thời gian sẽ cập nhật tại đây.
-              </p>
-            </div>
-          ) : (
-            <ol className="activity-timeline-list" aria-label="Dòng thời gian hoạt động">
-              {data.timeline.map((event) => (
-                <li key={event.id} className="activity-timeline-item">
-                  <div className="activity-timeline-dot" aria-hidden="true" />
-                  <div className="activity-timeline-content">
-                    <div className="activity-timeline-header">
-                      <span className="tender-code">{event.action}</span>
-                      <time dateTime={String(event.createdAt)}>
-                        {new Date(event.createdAt).toLocaleString('vi-VN')}
-                      </time>
-                    </div>
-                    <p className="activity-timeline-summary">{event.summary}</p>
-                    <div className="activity-timeline-footer">
-                      <span className="muted">
-                        Thực hiện bởi <strong>{event.actorName}</strong> ({roleLabels[event.actorRole]})
-                      </span>
-                      {event.href && (
-                        <Link className="activity-timeline-link" href={event.href}>
-                          Mở chi tiết →
-                        </Link>
-                      )}
-                    </div>
-                  </div>
-                </li>
+          <div className="tender-audit-toolbar" role="region" aria-label="Bộ lọc sự kiện">
+            <div className="tender-stage-tabs" role="group" aria-label="Phạm vi sự kiện">
+              {(['ALL', 'TENDER', 'CATALOG', 'ORG'] as LogScopeFilter[]).map((scope) => (
+                <button
+                  key={scope}
+                  type="button"
+                  className={
+                    logScope === scope ? 'tender-filter-chip is-active' : 'tender-filter-chip'
+                  }
+                  onClick={() => {
+                    setLogScope(scope)
+                    setLogPage(1)
+                  }}
+                >
+                  {logScopeLabels[scope]}
+                </button>
               ))}
-            </ol>
+            </div>
+
+            <label className="tender-audit-limit-control">
+              <span>Hiển thị</span>
+              <select
+                aria-label="Số dòng sự kiện mỗi trang"
+                value={String(logLimit)}
+                onChange={(event) => {
+                  setLogLimit(Number(event.target.value))
+                  setLogPage(1)
+                }}
+              >
+                <option value="5">5 dòng / trang</option>
+                <option value="10">10 dòng / trang</option>
+                <option value="20">20 dòng / trang</option>
+              </select>
+            </label>
+          </div>
+
+          {visibleLogs.length === 0 ? (
+            <p className="muted" style={{ marginTop: '.75rem' }}>
+              Chưa có sự kiện nào khớp với bộ lọc hiện tại.
+            </p>
+          ) : (
+            <>
+              <ul className="tender-audit-list">
+                {visibleLogs.map((event) => (
+                  <li key={event.id} className="tender-audit-row">
+                    <div>
+                      <strong>{event.summary}</strong>
+                      <small>
+                        {event.actorName} · {roleLabels[event.actorRole]} ·{' '}
+                        <span className="tender-audit-action">{event.action}</span>
+                        {event.href && (
+                          <>
+                            {' · '}
+                            <Link className="activity-timeline-link" href={event.href}>
+                              Mở chi tiết →
+                            </Link>
+                          </>
+                        )}
+                      </small>
+                    </div>
+                    <time dateTime={String(event.createdAt)}>
+                      {new Date(event.createdAt).toLocaleString('vi-VN')}
+                    </time>
+                  </li>
+                ))}
+              </ul>
+
+              <div className="tender-audit-pagination" aria-label="Phân trang sự kiện">
+                <span className="muted">
+                  Hiển thị{' '}
+                  <strong>
+                    {logStartIndex + 1}–{logStartIndex + visibleLogs.length}
+                  </strong>{' '}
+                  trên tổng <strong>{filteredLogs.length}</strong> sự kiện
+                </span>
+                <div className="tender-audit-page-controls">
+                  <button
+                    type="button"
+                    className="tender-chip-button"
+                    disabled={safeLogPage <= 1}
+                    onClick={() => setLogPage((prev) => Math.max(1, prev - 1))}
+                  >
+                    ← Trang trước
+                  </button>
+                  <span className="tender-audit-page-indicator">
+                    Trang {safeLogPage} / {totalLogPages}
+                  </span>
+                  <button
+                    type="button"
+                    className="tender-chip-button"
+                    disabled={safeLogPage >= totalLogPages}
+                    onClick={() => setLogPage((prev) => Math.min(totalLogPages, prev + 1))}
+                  >
+                    Trang sau →
+                  </button>
+                </div>
+              </div>
+            </>
           )}
         </section>
-      </div>
+      )}
     </div>
   )
 }

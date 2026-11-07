@@ -1622,12 +1622,177 @@
   color: var(--ink);
 }
 
+/* Refined Catalog Toolbar, Cards, Spec Rows & Governance Tables */
+.catalog-search-group {
+  display: flex;
+  flex: 1 1 320px;
+  align-items: center;
+  gap: .5rem;
+}
+
+.catalog-create-form {
+  margin-bottom: 1rem;
+}
+
+.catalog-empty-box {
+  margin-top: .5rem;
+}
+
+.catalog-card-badges {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: .45rem;
+  margin-bottom: .15rem;
+}
+
+.catalog-version-header-info {
+  display: grid;
+  gap: .2rem;
+}
+
+.catalog-conflict-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: .75rem;
+  padding: .65rem 1.15rem;
+  border-bottom: 1px solid var(--line);
+  background: rgba(245, 158, 11, 0.05);
+}
+
+.catalog-spec-title-line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: .45rem;
+}
+
+.catalog-spec-item-row.is-conflict {
+  background: rgba(245, 158, 11, 0.06);
+}
+
+.governance-explainer-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: .85rem;
+  margin-top: .85rem;
+}
+
+.governance-explainer-card {
+  display: grid;
+  gap: .35rem;
+  padding: .9rem 1.05rem;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  background: var(--surface-muted);
+}
+
+.governance-explainer-card span {
+  font-size: .8rem;
+  font-weight: 780;
+  color: var(--teal);
+}
+
+.governance-explainer-card p {
+  margin: 0;
+  font-size: .8rem;
+  line-height: 1.5;
+  color: var(--muted);
+}
+
+.governance-table-wrap {
+  margin-top: .85rem;
+  overflow-x: auto;
+  border: 1px solid var(--line);
+  border-radius: 11px;
+  background: var(--surface);
+}
+
+.governance-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: .85rem;
+  text-align: left;
+}
+
+.governance-table th {
+  padding: .75rem 1rem;
+  border-bottom: 1px solid var(--line);
+  background: var(--surface-muted);
+  color: var(--muted);
+  font-size: .72rem;
+  font-weight: 780;
+  text-transform: uppercase;
+  letter-spacing: .05em;
+  white-space: nowrap;
+}
+
+.governance-table td {
+  padding: .8rem 1rem;
+  border-bottom: 1px solid var(--line);
+  vertical-align: middle;
+}
+
+.governance-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.governance-table tbody tr:hover {
+  background: var(--surface-muted);
+}
+
+.governance-role-select {
+  min-height: 34px;
+  padding: .3rem .65rem;
+  border: 1px solid var(--field-line);
+  border-radius: 8px;
+  background: var(--field-bg);
+  color: var(--ink);
+  font-size: .82rem;
+  font-weight: 600;
+}
+
+.tender-chip-button.is-danger-chip {
+  border-color: var(--danger-line);
+  color: var(--danger-ink);
+  background: var(--danger-soft);
+}
+
+.governance-audit-time {
+  white-space: nowrap;
+  color: var(--muted);
+  font-size: .78rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.governance-audit-code {
+  white-space: nowrap;
+}
+
+.governance-audit-summary strong {
+  font-weight: 640;
+  color: var(--ink);
+}
+
+.governance-audit-actor {
+  display: grid;
+  gap: .1rem;
+  white-space: nowrap;
+}
+
+.governance-audit-actor small {
+  font-size: .74rem;
+}
+
 @media (max-width: 980px) {
   .activity-kpi-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
   .activity-main-grid,
-  .governance-grid {
+  .governance-grid,
+  .governance-explainer-grid {
     grid-template-columns: 1fr;
   }
   .catalog-spec-row {

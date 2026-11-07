@@ -21,20 +21,23 @@ import {
 
 const versionStatusMeta: Record<
   'DRAFT' | 'PUBLISHED' | 'SUPERSEDED',
-  { label: string; pillClass: string; desc: string }
+  { label: string; shortLabel: string; pillClass: string; desc: string }
 > = {
   DRAFT: {
     label: 'Bản nháp (Có thể chỉnh sửa)',
+    shortLabel: 'Bản nháp',
     pillClass: 'is-draft',
     desc: 'Phiên bản đang trong quá trình biên tập thông số. Có thể thêm, sửa, xóa thông số trước khi xuất bản.',
   },
   PUBLISHED: {
     label: 'Đã xuất bản (Khóa bất biến)',
+    shortLabel: 'Đã xuất bản',
     pillClass: 'is-published',
     desc: 'Phiên bản chuẩn hiện hành dùng để đối chiếu hồ sơ thầu. Mọi thông số đã được khóa bất biến.',
   },
   SUPERSEDED: {
     label: 'Lịch sử (Đã thay thế)',
+    shortLabel: 'Đã thay thế',
     pillClass: 'is-superseded',
     desc: 'Phiên bản cũ được bảo toàn nguyên vẹn để phục vụ truy vết các gói thầu đã tham chiếu trước đó.',
   },
@@ -48,7 +51,7 @@ function EditIcon() {
       height="15"
       fill="none"
       stroke="currentColor"
-      strokeWidth="2"
+      strokeWidth="1.9"
       strokeLinecap="round"
       strokeLinejoin="round"
       aria-hidden="true"
@@ -67,7 +70,7 @@ function TrashIcon() {
       height="15"
       fill="none"
       stroke="currentColor"
-      strokeWidth="2"
+      strokeWidth="1.9"
       strokeLinecap="round"
       strokeLinejoin="round"
       aria-hidden="true"
@@ -190,24 +193,24 @@ export function CatalogDetailView({ slug, productId }: { slug: string; productId
 
   if (loading && !product) {
     return (
-      <section className="tender-panel" aria-busy="true">
-        <div className="tender-detail-skeleton" aria-label="Đang tải chi tiết sản phẩm catalog">
-          <div className="tender-skeleton-hero" />
-          <div className="tender-skeleton-strip" />
-          <div className="tender-skeleton-list">
-            <i />
-            <i />
-            <i />
-          </div>
+      <div className="tender-detail-skeleton" aria-label="Đang tải chi tiết sản phẩm catalog" aria-busy="true">
+        <div className="surface tender-skeleton-head">
+          <div className="skeleton-line skeleton-kicker" />
+          <div className="skeleton-line skeleton-title" />
         </div>
-      </section>
+        <div className="tender-skeleton-list">
+          <i />
+          <i />
+          <i />
+        </div>
+      </div>
     )
   }
 
   if (!product) {
     return (
-      <section className="tender-panel">
-        <p className="form-error" role="alert">
+      <section className="surface tender-list-panel">
+        <p className="notice notice-error" role="alert">
           {error ?? 'Không tìm thấy sản phẩm trong catalog.'}
         </p>
         <Link className="button button-secondary" href={`/${slug}/catalog`}>
@@ -398,82 +401,38 @@ export function CatalogDetailView({ slug, productId }: { slug: string; productId
     : []
 
   return (
-    <div className="tender-detail-stack">
-      <div className="tender-breadcrumb">
-        <Link href={`/${slug}/catalog`}>← Danh mục sản phẩm (Catalog)</Link>
+    <div className="tender-detail-page">
+      <div className="tender-breadcrumb-bar">
+        <Link className="tender-back-link" href={`/${slug}/catalog`}>
+          ← Danh mục sản phẩm (Catalog)
+        </Link>
+        <div className="tender-inline-metrics" aria-label="Tóm tắt sản phẩm">
+          <span>
+            <strong>{product.versionCount}</strong> Phiên bản
+          </span>
+          <i>·</i>
+          <span>
+            <strong>{activeVersion?.specificationCount ?? 0}</strong>/200 Thông số
+          </span>
+        </div>
       </div>
 
-      <section className="tender-panel tender-hero-panel">
-        <div className="tender-panel-head">
-          <div>
-            <div className="tender-card-meta">
-              <span className="tender-code">{product.sku}</span>
-              <span className="tender-stage-pill">{product.brand}</span>
-              {product.category && <span className="catalog-category-pill">{product.category}</span>}
-              <span
-                className={
-                  product.status === 'ACTIVE'
-                    ? 'catalog-status-pill is-published'
-                    : 'catalog-status-pill is-superseded'
-                }
-              >
-                {product.status === 'ACTIVE' ? 'Đang hoạt động' : 'Đã lưu trữ'}
-              </span>
-            </div>
-            <h2>{product.name}</h2>
-            <p className="muted">
-              {product.manufacturer
-                ? `Nhà sản xuất: ${product.manufacturer}`
-                : 'Chưa khai báo nhà sản xuất chi tiết'}
-              {' · '}
-              Tổng cộng <strong>{product.versionCount}</strong> phiên bản được lưu trữ lịch sử.
-            </p>
-          </div>
-
-          {canWrite && (
-            <div className="tender-action-row">
+      <section className="surface tender-detail-head">
+        {editingProduct && canWrite ? (
+          <form className="tender-edit-head-form" onSubmit={handleUpdateProduct} aria-label="Cập nhật sản phẩm">
+            <div className="tender-entry-heading">
+              <strong>Chỉnh sửa định danh sản phẩm</strong>
               <button
-                className="button button-secondary"
                 type="button"
-                disabled={busy}
-                onClick={() => setEditingProduct((v) => !v)}
+                className="tender-text-button"
+                onClick={() => setEditingProduct(false)}
               >
-                {editingProduct ? 'Đóng' : 'Sửa định danh SKU'}
-              </button>
-              <button
-                className="button button-primary"
-                type="button"
-                disabled={busy}
-                onClick={() => {
-                  setCreatingVersion((v) => !v)
-                  if (activeVersion && !newVersionModel) {
-                    setNewVersionModel(activeVersion.modelCode)
-                    setCloneFromId(activeVersion.id)
-                  }
-                }}
-              >
-                {creatingVersion ? 'Đóng tạo phiên bản' : '+ Tạo phiên bản mới'}
+                Hủy
               </button>
             </div>
-          )}
-        </div>
-
-        {error && (
-          <p className="form-error" role="alert">
-            {error}
-          </p>
-        )}
-        {notice && (
-          <p className="governance-success-banner" role="status">
-            {notice}
-          </p>
-        )}
-
-        {editingProduct && canWrite && (
-          <form className="tender-form" onSubmit={handleUpdateProduct} aria-label="Cập nhật sản phẩm">
             <div className="tender-form-grid">
-              <label className="field">
-                <span>Mã SKU</span>
+              <label>
+                Mã SKU
                 <input
                   required
                   maxLength={100}
@@ -481,8 +440,8 @@ export function CatalogDetailView({ slug, productId }: { slug: string; productId
                   onChange={(event) => setProdSku(event.target.value)}
                 />
               </label>
-              <label className="field">
-                <span>Hãng / Thương hiệu</span>
+              <label>
+                Hãng / Thương hiệu
                 <input
                   required
                   maxLength={120}
@@ -490,8 +449,8 @@ export function CatalogDetailView({ slug, productId }: { slug: string; productId
                   onChange={(event) => setProdBrand(event.target.value)}
                 />
               </label>
-              <label className="field field-wide">
-                <span>Tên thiết bị</span>
+              <label className="span-2">
+                Tên thiết bị
                 <input
                   required
                   maxLength={200}
@@ -499,24 +458,24 @@ export function CatalogDetailView({ slug, productId }: { slug: string; productId
                   onChange={(event) => setProdName(event.target.value)}
                 />
               </label>
-              <label className="field">
-                <span>Nhà sản xuất</span>
+              <label>
+                Nhà sản xuất
                 <input
                   maxLength={200}
                   value={prodManufacturer}
                   onChange={(event) => setProdManufacturer(event.target.value)}
                 />
               </label>
-              <label className="field">
-                <span>Nhóm thiết bị</span>
+              <label>
+                Nhóm thiết bị
                 <input
                   maxLength={120}
                   value={prodCategory}
                   onChange={(event) => setProdCategory(event.target.value)}
                 />
               </label>
-              <label className="field">
-                <span>Trạng thái vòng đời SKU</span>
+              <label>
+                Trạng thái vòng đời SKU
                 <select
                   value={prodStatus}
                   onChange={(event) => setProdStatus(event.target.value as 'ACTIVE' | 'ARCHIVED')}
@@ -526,102 +485,158 @@ export function CatalogDetailView({ slug, productId }: { slug: string; productId
                 </select>
               </label>
             </div>
-            <div className="tender-form-actions">
-              <button
-                className="button button-secondary"
-                type="button"
-                onClick={() => setEditingProduct(false)}
-              >
-                Hủy
-              </button>
+            <div className="tender-inline-actions">
               <button className="button button-primary" disabled={busy} type="submit">
                 Lưu thay đổi
               </button>
             </div>
           </form>
-        )}
-
-        {creatingVersion && canWrite && (
-          <form
-            className="tender-form"
-            onSubmit={handleCreateVersion}
-            aria-label="Tạo phiên bản sản phẩm mới"
-          >
-            <div className="tender-form-grid">
-              <label className="field">
-                <span>Mã Model của phiên bản mới</span>
-                <input
-                  required
-                  maxLength={120}
-                  value={newVersionModel}
-                  onChange={(event) => setNewVersionModel(event.target.value)}
-                  placeholder="VD: MEC-1200 Pro (2026)"
-                />
-              </label>
-              <label className="field">
-                <span>Sao chép thông số nền từ phiên bản</span>
-                <select
-                  value={cloneFromId}
-                  onChange={(event) => setCloneFromId(event.target.value)}
+        ) : (
+          <div className="tender-head-compact">
+            <div className="tender-head-copy">
+              <div className="tender-head-badges">
+                <span className="tender-lot-code">{product.sku}</span>
+                <span className="tender-stage-badge">{product.brand}</span>
+                {product.category && <span className="catalog-category-pill">{product.category}</span>}
+                <span
+                  className={
+                    product.status === 'ACTIVE'
+                      ? 'catalog-status-pill is-published'
+                      : 'catalog-status-pill is-superseded'
+                  }
                 >
-                  <option value="">Khởi tạo trống (0 thông số)</option>
-                  {product.versions.map((ver) => (
-                    <option key={ver.id} value={ver.id}>
-                      {ver.versionLabel} · {ver.modelCode} ({ver.specificationCount} thông số ·{' '}
-                      {versionStatusMeta[ver.status].label})
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label className="field field-wide">
-                <span>Ghi chú thay đổi của phiên bản mới</span>
-                <input
-                  maxLength={2000}
-                  value={newVersionNotes}
-                  onChange={(event) => setNewVersionNotes(event.target.value)}
-                  placeholder="VD: Bổ sung thông số từ tờ khai CFS và cập nhật dải đo SpO2"
-                />
-              </label>
+                  {product.status === 'ACTIVE' ? 'Đang hoạt động' : 'Đã lưu trữ'}
+                </span>
+              </div>
+              <h1>{product.name}</h1>
+              <p className="muted" style={{ fontSize: '.84rem', margin: 0 }}>
+                {product.manufacturer
+                  ? `Nhà sản xuất: ${product.manufacturer}`
+                  : 'Chưa khai báo nhà sản xuất chi tiết'}
+                {' · '}
+                Lưu trữ <strong>{product.versionCount}</strong> phiên bản bất biến.
+              </p>
             </div>
-            <div className="tender-form-actions">
-              <button
-                className="button button-secondary"
-                type="button"
-                onClick={() => setCreatingVersion(false)}
-              >
-                Hủy
-              </button>
-              <button className="button button-primary" disabled={busy} type="submit">
-                Khởi tạo phiên bản mới
-              </button>
-            </div>
-          </form>
+
+            {canWrite && (
+              <div className="tender-head-actions">
+                <button
+                  className="tender-icon-button"
+                  type="button"
+                  disabled={busy}
+                  onClick={() => setEditingProduct((v) => !v)}
+                  aria-label="Sửa định danh SKU"
+                  title="Chỉnh sửa định danh SKU"
+                >
+                  <EditIcon />
+                </button>
+                <button
+                  className="button button-primary tender-add-lot-btn"
+                  type="button"
+                  disabled={busy}
+                  onClick={() => {
+                    setCreatingVersion((v) => !v)
+                    if (activeVersion && !newVersionModel) {
+                      setNewVersionModel(activeVersion.modelCode)
+                      setCloneFromId(activeVersion.id)
+                    }
+                  }}
+                >
+                  {creatingVersion ? 'Đóng tạo phiên bản' : '+ Tạo phiên bản mới'}
+                </button>
+              </div>
+            )}
+          </div>
         )}
       </section>
 
-      <section className="tender-panel">
-        <div className="tender-panel-head">
-          <div>
-            <p className="eyebrow">Lịch sử Phiên bản Bất biến</p>
-            <h2>Chọn phiên bản để tra cứu hoặc biên tập ({product.versions.length})</h2>
-            <p className="muted">
-              Khi tạo phiên bản mới (VD: v2), phiên bản cũ (v1) vẫn giữ nguyên mọi giá trị model và thông số để đảm bảo
-              tính toàn vẹn lịch sử đấu thầu.
-            </p>
-          </div>
-        </div>
+      {error && (
+        <p className="notice notice-error" role="alert">
+          {error}
+        </p>
+      )}
+      {notice && (
+        <p className="governance-success-banner" role="status">
+          {notice}
+        </p>
+      )}
 
-        <div className="catalog-version-tabs" role="tablist" aria-label="Danh sách phiên bản sản phẩm">
+      {creatingVersion && canWrite && (
+        <form
+          className="tender-entry-form"
+          onSubmit={handleCreateVersion}
+          aria-label="Tạo phiên bản sản phẩm mới"
+        >
+          <div className="tender-entry-heading">
+            <div>
+              <strong>Khởi tạo phiên bản sản phẩm mới</strong>
+              <p className="muted">
+                Phiên bản cũ vẫn được bảo toàn nguyên vẹn. Bạn có thể sao chép bộ thông số nền từ phiên bản trước để chỉnh sửa nhanh.
+              </p>
+            </div>
+            <button
+              type="button"
+              className="tender-text-button"
+              onClick={() => setCreatingVersion(false)}
+            >
+              Đóng
+            </button>
+          </div>
+          <div className="tender-form-grid">
+            <label>
+              Mã Model của phiên bản mới
+              <input
+                required
+                maxLength={120}
+                value={newVersionModel}
+                onChange={(event) => setNewVersionModel(event.target.value)}
+                placeholder="VD: MEC-1200 Pro (2026)"
+              />
+            </label>
+            <label>
+              Sao chép thông số nền từ phiên bản
+              <select
+                value={cloneFromId}
+                onChange={(event) => setCloneFromId(event.target.value)}
+              >
+                <option value="">Khởi tạo trống (0 thông số)</option>
+                {product.versions.map((ver) => (
+                  <option key={ver.id} value={ver.id}>
+                    {ver.versionLabel} · {ver.modelCode} ({ver.specificationCount} thông số ·{' '}
+                    {versionStatusMeta[ver.status].shortLabel})
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="span-2">
+              Ghi chú thay đổi của phiên bản mới
+              <input
+                maxLength={2000}
+                value={newVersionNotes}
+                onChange={(event) => setNewVersionNotes(event.target.value)}
+                placeholder="VD: Bổ sung thông số từ tờ khai CFS và cập nhật dải đo SpO2"
+              />
+            </label>
+          </div>
+          <div className="tender-inline-actions">
+            <button className="button button-primary" disabled={busy} type="submit">
+              Khởi tạo phiên bản mới
+            </button>
+          </div>
+        </form>
+      )}
+
+      <div className="tender-subtabs-bar">
+        <div className="tender-subtabs" role="tablist" aria-label="Danh sách phiên bản sản phẩm">
           {product.versions.map((ver) => {
             const isSelected = ver.id === activeVersion?.id
-            const statusInfo = versionStatusMeta[ver.status]
             return (
               <button
                 key={ver.id}
                 role="tab"
                 type="button"
                 aria-selected={isSelected}
-                className={isSelected ? 'catalog-version-tab is-active' : 'catalog-version-tab'}
+                className={isSelected ? 'tender-subtab is-active' : 'tender-subtab'}
                 onClick={() => {
                   setSelectedVersionId(ver.id)
                   setEditingVersionMeta(false)
@@ -629,341 +644,332 @@ export function CatalogDetailView({ slug, productId }: { slug: string; productId
                   setEditingSpecId(null)
                 }}
               >
-                <div className="catalog-version-tab-top">
-                  <strong>{ver.versionLabel}</strong>
-                  <span className={`catalog-status-pill ${statusInfo.pillClass}`}>
-                    {ver.status === 'PUBLISHED'
-                      ? 'Đã xuất bản'
-                      : ver.status === 'DRAFT'
-                        ? 'Bản nháp'
-                        : 'Đã thay thế'}
-                  </span>
-                </div>
-                <span className="catalog-version-tab-model">Model: {ver.modelCode}</span>
-                <span className="catalog-version-tab-meta">
-                  {ver.specificationCount} thông số
-                  {ver.conflictCount > 0 ? ` · ⚠ ${ver.conflictCount} xung đột` : ''}
+                <span>
+                  {ver.versionLabel} · {ver.modelCode}
+                </span>
+                <span className="tender-subtab-badge">
+                  {versionStatusMeta[ver.status].shortLabel} ({ver.specificationCount})
                 </span>
               </button>
             )
           })}
         </div>
 
-        {activeVersion && (
-          <div className="catalog-active-version-box">
-            <div className="catalog-active-version-head">
-              <div>
-                <div className="tender-card-meta">
-                  <span className="tender-code">{activeVersion.versionLabel}</span>
-                  <span
-                    className={`catalog-status-pill ${versionStatusMeta[activeVersion.status].pillClass}`}
-                  >
-                    {versionStatusMeta[activeVersion.status].label}
-                  </span>
-                  <span className="catalog-fingerprint" title="Mã băm kiểm chứng tính toàn vẹn phiên bản">
-                    Fingerprint: <code>{activeVersion.fingerprint}</code>
-                  </span>
-                </div>
+        {activeVersion && canWrite && isDraft && (
+          <div className="tender-head-actions">
+            <button
+              className="button button-secondary tender-add-item-btn"
+              type="button"
+              disabled={busy}
+              onClick={() => startEditVersionMeta(activeVersion)}
+            >
+              Sửa Model
+            </button>
+            <button
+              className="button button-secondary tender-add-item-btn"
+              type="button"
+              disabled={busy}
+              onClick={() => setAddingSpec((v) => !v)}
+            >
+              {addingSpec ? 'Đóng thêm thông số' : '+ Thêm thông số'}
+            </button>
+            <button
+              className="button button-primary tender-add-lot-btn"
+              type="button"
+              disabled={busy}
+              onClick={handlePublishVersion}
+            >
+              Xuất bản {activeVersion.versionLabel}
+            </button>
+          </div>
+        )}
+      </div>
+
+      {activeVersion && (
+        <article className="tender-lot-card">
+          <div className="tender-lot-heading">
+            <div className="catalog-version-header-info">
+              <div className="tender-lot-title-wrap">
+                <span className="tender-lot-code">{activeVersion.versionLabel}</span>
                 <h3>Model: {activeVersion.modelCode}</h3>
-                <p className="muted">
-                  {activeVersion.notes || versionStatusMeta[activeVersion.status].desc}
-                </p>
-                {activeVersion.publishedAt && (
+                <span
+                  className={`catalog-status-pill ${versionStatusMeta[activeVersion.status].pillClass}`}
+                >
+                  {versionStatusMeta[activeVersion.status].label}
+                </span>
+                <span className="catalog-fingerprint" title="Mã băm kiểm chứng tính toàn vẹn phiên bản">
+                  Fingerprint: <code>{activeVersion.fingerprint}</code>
+                </span>
+              </div>
+              <p className="muted" style={{ fontSize: '.82rem', margin: '.25rem 0 0' }}>
+                {activeVersion.notes || versionStatusMeta[activeVersion.status].desc}
+                {activeVersion.publishedAt
+                  ? ` · Xuất bản lúc: ${new Date(activeVersion.publishedAt).toLocaleString('vi-VN')}`
+                  : ''}
+              </p>
+            </div>
+
+            {!isDraft && (
+              <span className="catalog-immutable-lock">
+                🔒 Đã khóa bất biến — Tạo phiên bản mới nếu cần cập nhật thông số
+              </span>
+            )}
+          </div>
+
+          {editingVersionMeta && isDraft && canWrite && (
+            <form
+              className="tender-entry-form tender-lot-edit-form"
+              onSubmit={handleSaveVersionMeta}
+              aria-label="Cập nhật model phiên bản"
+            >
+              <div className="tender-entry-heading">
+                <strong>Cập nhật thông tin {activeVersion.versionLabel}</strong>
+                <button
+                  type="button"
+                  className="tender-text-button"
+                  onClick={() => setEditingVersionMeta(false)}
+                >
+                  Hủy
+                </button>
+              </div>
+              <div className="tender-form-grid">
+                <label>
+                  Mã Model thiết bị
+                  <input
+                    required
+                    maxLength={120}
+                    value={verModel}
+                    onChange={(event) => setVerModel(event.target.value)}
+                  />
+                </label>
+                <label>
+                  Ghi chú phiên bản
+                  <input
+                    maxLength={2000}
+                    value={verNotes}
+                    onChange={(event) => setVerNotes(event.target.value)}
+                  />
+                </label>
+              </div>
+              <div className="tender-inline-actions">
+                <button className="button button-primary" disabled={busy} type="submit">
+                  Lưu phiên bản
+                </button>
+              </div>
+            </form>
+          )}
+
+          {addingSpec && isDraft && canWrite && (
+            <form
+              className="tender-entry-form tender-item-form"
+              onSubmit={handleAddSpec}
+              aria-label="Thêm thông số kỹ thuật"
+            >
+              <div className="tender-entry-heading">
+                <div>
+                  <strong>Thêm thông số kỹ thuật kèm truy vết nguồn</strong>
                   <p className="muted">
-                    Xuất bản lúc: {new Date(activeVersion.publishedAt).toLocaleString('vi-VN')}
+                    Nếu cùng một thông số có hai giá trị khác nhau từ hai nguồn tài liệu, hệ thống sẽ giữ cả hai và cảnh báo xung đột.
                   </p>
-                )}
-              </div>
-
-              {canWrite && (
-                <div className="tender-action-row">
-                  {isDraft ? (
-                    <>
-                      <button
-                        className="button button-secondary"
-                        type="button"
-                        disabled={busy}
-                        onClick={() => startEditVersionMeta(activeVersion)}
-                      >
-                        Sửa Model / Ghi chú
-                      </button>
-                      <button
-                        className="button button-secondary"
-                        type="button"
-                        disabled={busy}
-                        onClick={() => setAddingSpec((v) => !v)}
-                      >
-                        {addingSpec ? 'Đóng thêm thông số' : '+ Thêm thông số'}
-                      </button>
-                      <button
-                        className="button button-primary"
-                        type="button"
-                        disabled={busy}
-                        onClick={handlePublishVersion}
-                      >
-                        Xuất bản {activeVersion.versionLabel}
-                      </button>
-                    </>
-                  ) : (
-                    <span className="catalog-immutable-lock">
-                      🔒 Đã khóa bất biến — Tạo phiên bản mới nếu cần cập nhật thông số
-                    </span>
-                  )}
                 </div>
-              )}
+                <button
+                  type="button"
+                  className="tender-text-button"
+                  onClick={() => setAddingSpec(false)}
+                >
+                  Đóng
+                </button>
+              </div>
+              <div className="tender-form-grid tender-item-fields">
+                <label>
+                  Tên thông số kỹ thuật (specKey)
+                  <input
+                    required
+                    maxLength={120}
+                    value={specKey}
+                    onChange={(event) => setSpecKey(event.target.value)}
+                    placeholder="VD: Thời lượng pin dự phòng"
+                  />
+                </label>
+                <label>
+                  Giá trị thông số (specValue)
+                  <input
+                    required
+                    maxLength={1000}
+                    value={specValue}
+                    onChange={(event) => setSpecValue(event.target.value)}
+                    placeholder="VD: ≥ 120"
+                  />
+                </label>
+                <label>
+                  Đơn vị tính
+                  <input
+                    maxLength={50}
+                    value={specUnit}
+                    onChange={(event) => setSpecUnit(event.target.value)}
+                    placeholder="VD: phút / inch / %"
+                  />
+                </label>
+                <label>
+                  Nguồn tài liệu (sourceLabel — Bắt buộc)
+                  <input
+                    required
+                    maxLength={200}
+                    value={sourceLabel}
+                    onChange={(event) => setSourceLabel(event.target.value)}
+                    placeholder="VD: Brochure nhà sản xuất v2.1 (Trang 4)"
+                  />
+                </label>
+                <label className="span-2">
+                  Trích dẫn nguyên văn từ tài liệu (sourceQuote)
+                  <input
+                    maxLength={2000}
+                    value={sourceQuote}
+                    onChange={(event) => setSourceQuote(event.target.value)}
+                    placeholder="VD: Rechargeable Li-ion battery providing at least 120 minutes of continuous monitoring"
+                  />
+                </label>
+              </div>
+              <div className="tender-inline-actions">
+                <button className="button button-primary" disabled={busy} type="submit">
+                  Lưu thông số & Nguồn
+                </button>
+              </div>
+            </form>
+          )}
+
+          {activeVersion.conflictCount > 0 && (
+            <div className="catalog-conflict-bar">
+              <span className="catalog-conflict-badge">
+                ⚠ Phát hiện {activeVersion.conflictCount} thông số có giá trị khác nhau giữa các nguồn tài liệu
+              </span>
+              <div className="tender-stage-tabs">
+                <button
+                  type="button"
+                  className={!onlyConflicts ? 'tender-filter-chip is-active' : 'tender-filter-chip'}
+                  onClick={() => setOnlyConflicts(false)}
+                >
+                  Tất cả ({activeVersion.specificationCount})
+                </button>
+                <button
+                  type="button"
+                  className={onlyConflicts ? 'tender-filter-chip is-active' : 'tender-filter-chip'}
+                  onClick={() => setOnlyConflicts(true)}
+                >
+                  Chỉ hiện xung đột
+                </button>
+              </div>
             </div>
+          )}
 
-            {editingVersionMeta && isDraft && canWrite && (
-              <form
-                className="tender-form"
-                onSubmit={handleSaveVersionMeta}
-                aria-label="Cập nhật model phiên bản"
-              >
-                <div className="tender-form-grid">
-                  <label className="field">
-                    <span>Mã Model thiết bị</span>
-                    <input
-                      required
-                      maxLength={120}
-                      value={verModel}
-                      onChange={(event) => setVerModel(event.target.value)}
-                    />
-                  </label>
-                  <label className="field">
-                    <span>Ghi chú phiên bản</span>
-                    <input
-                      maxLength={2000}
-                      value={verNotes}
-                      onChange={(event) => setVerNotes(event.target.value)}
-                    />
-                  </label>
-                </div>
-                <div className="tender-form-actions">
-                  <button
-                    className="button button-secondary"
-                    type="button"
-                    onClick={() => setEditingVersionMeta(false)}
+          {displayedSpecs.length === 0 ? (
+            <p className="tender-empty-item">
+              {isDraft && canWrite
+                ? `Chưa có thông số kỹ thuật nào trong ${activeVersion.versionLabel}. Nhấn "+ Thêm thông số" để khai báo thông số kèm nguồn trích dẫn.`
+                : `Phiên bản ${activeVersion.versionLabel} hiện chưa có thông số kỹ thuật được ghi nhận.`}
+            </p>
+          ) : (
+            <div className="tender-items-list" role="table" aria-label="Bảng thông số kỹ thuật có truy vết nguồn">
+              {displayedSpecs.map((spec, index) =>
+                editingSpecId === spec.id && isDraft && canWrite ? (
+                  <form
+                    key={spec.id}
+                    className="tender-entry-form tender-item-form"
+                    onSubmit={(event) => handleSaveSpec(event, spec.id)}
                   >
-                    Hủy
-                  </button>
-                  <button className="button button-primary" disabled={busy} type="submit">
-                    Lưu phiên bản
-                  </button>
-                </div>
-              </form>
-            )}
-
-            {addingSpec && isDraft && canWrite && (
-              <form
-                className="tender-form"
-                onSubmit={handleAddSpec}
-                aria-label="Thêm thông số kỹ thuật"
-              >
-                <div className="tender-form-grid">
-                  <label className="field">
-                    <span>Tên thông số kỹ thuật (specKey)</span>
-                    <input
-                      required
-                      maxLength={120}
-                      value={specKey}
-                      onChange={(event) => setSpecKey(event.target.value)}
-                      placeholder="VD: Thời lượng pin dự phòng"
-                    />
-                  </label>
-                  <label className="field">
-                    <span>Giá trị thông số (specValue)</span>
-                    <input
-                      required
-                      maxLength={1000}
-                      value={specValue}
-                      onChange={(event) => setSpecValue(event.target.value)}
-                      placeholder="VD: ≥ 120"
-                    />
-                  </label>
-                  <label className="field">
-                    <span>Đơn vị tính</span>
-                    <input
-                      maxLength={50}
-                      value={specUnit}
-                      onChange={(event) => setSpecUnit(event.target.value)}
-                      placeholder="VD: phút / inch / %"
-                    />
-                  </label>
-                  <label className="field">
-                    <span>Nguồn tài liệu (sourceLabel — Bắt buộc)</span>
-                    <input
-                      required
-                      maxLength={200}
-                      value={sourceLabel}
-                      onChange={(event) => setSourceLabel(event.target.value)}
-                      placeholder="VD: Brochure nhà sản xuất v2.1 (Trang 4)"
-                    />
-                  </label>
-                  <label className="field field-wide">
-                    <span>Trích dẫn nguyên văn từ tài liệu (sourceQuote)</span>
-                    <input
-                      maxLength={2000}
-                      value={sourceQuote}
-                      onChange={(event) => setSourceQuote(event.target.value)}
-                      placeholder="VD: Rechargeable Li-ion battery providing at least 120 minutes of continuous monitoring"
-                    />
-                  </label>
-                </div>
-                <div className="tender-form-actions">
-                  <button
-                    className="button button-secondary"
-                    type="button"
-                    onClick={() => setAddingSpec(false)}
+                    <div className="tender-entry-heading">
+                      <strong>Chỉnh sửa thông số: {spec.specKey}</strong>
+                      <button
+                        type="button"
+                        className="tender-text-button"
+                        onClick={() => setEditingSpecId(null)}
+                      >
+                        Hủy
+                      </button>
+                    </div>
+                    <div className="tender-form-grid tender-item-fields">
+                      <label>
+                        Tên thông số
+                        <input
+                          required
+                          maxLength={120}
+                          value={editSpecKey}
+                          onChange={(e) => setEditSpecKey(e.target.value)}
+                        />
+                      </label>
+                      <label>
+                        Giá trị
+                        <input
+                          required
+                          maxLength={1000}
+                          value={editSpecValue}
+                          onChange={(e) => setEditSpecValue(e.target.value)}
+                        />
+                      </label>
+                      <label>
+                        Đơn vị
+                        <input
+                          maxLength={50}
+                          value={editSpecUnit}
+                          onChange={(e) => setEditSpecUnit(e.target.value)}
+                        />
+                      </label>
+                      <label>
+                        Nguồn tài liệu
+                        <input
+                          required
+                          maxLength={200}
+                          value={editSourceLabel}
+                          onChange={(e) => setEditSourceLabel(e.target.value)}
+                        />
+                      </label>
+                      <label className="span-2">
+                        Trích dẫn nguyên văn
+                        <input
+                          maxLength={2000}
+                          value={editSourceQuote}
+                          onChange={(e) => setEditSourceQuote(e.target.value)}
+                        />
+                      </label>
+                    </div>
+                    <div className="tender-inline-actions">
+                      <button className="button button-primary" disabled={busy} type="submit">
+                        Lưu thông số
+                      </button>
+                    </div>
+                  </form>
+                ) : (
+                  <div
+                    key={spec.id}
+                    className={
+                      spec.hasConflict
+                        ? 'tender-item-row catalog-spec-item-row is-conflict'
+                        : 'tender-item-row catalog-spec-item-row'
+                    }
+                    role="row"
                   >
-                    Hủy
-                  </button>
-                  <button className="button button-primary" disabled={busy} type="submit">
-                    Lưu thông số & Nguồn
-                  </button>
-                </div>
-              </form>
-            )}
-
-            <div className="catalog-spec-toolbar">
-              <div className="catalog-spec-summary">
-                <strong>
-                  Danh sách thông số kỹ thuật ({activeVersion.specificationCount} thông số)
-                </strong>
-                {activeVersion.conflictCount > 0 && (
-                  <span className="catalog-conflict-badge">
-                    ⚠ Phát hiện {activeVersion.conflictCount} thông số có giá trị khác nhau giữa các nguồn tài liệu
-                  </span>
-                )}
-              </div>
-
-              {activeVersion.conflictCount > 0 && (
-                <div className="tender-stage-filters">
-                  <button
-                    type="button"
-                    className={!onlyConflicts ? 'tender-filter-chip is-active' : 'tender-filter-chip'}
-                    onClick={() => setOnlyConflicts(false)}
-                  >
-                    Tất cả ({activeVersion.specificationCount})
-                  </button>
-                  <button
-                    type="button"
-                    className={onlyConflicts ? 'tender-filter-chip is-active' : 'tender-filter-chip'}
-                    onClick={() => setOnlyConflicts(true)}
-                  >
-                    Chỉ hiện xung đột
-                  </button>
-                </div>
-              )}
-            </div>
-
-            {displayedSpecs.length === 0 ? (
-              <div className="tender-empty">
-                <h3>Chưa có thông số kỹ thuật nào trong phiên bản {activeVersion.versionLabel}</h3>
-                <p className="muted">
-                  {isDraft && canWrite
-                    ? 'Nhấn "+ Thêm thông số" để khai báo thông số kỹ thuật kèm nguồn trích dẫn tài liệu.'
-                    : 'Phiên bản này hiện chưa có thông số kỹ thuật được ghi nhận.'}
-                </p>
-              </div>
-            ) : (
-              <div className="tender-item-table" role="table" aria-label="Bảng thông số kỹ thuật có truy vết nguồn">
-                {displayedSpecs.map((spec) =>
-                  editingSpecId === spec.id && isDraft && canWrite ? (
-                    <form
-                      key={spec.id}
-                      className="tender-form"
-                      onSubmit={(event) => handleSaveSpec(event, spec.id)}
-                    >
-                      <div className="tender-form-grid">
-                        <label className="field">
-                          <span>Tên thông số</span>
-                          <input
-                            required
-                            maxLength={120}
-                            value={editSpecKey}
-                            onChange={(e) => setEditSpecKey(e.target.value)}
-                          />
-                        </label>
-                        <label className="field">
-                          <span>Giá trị</span>
-                          <input
-                            required
-                            maxLength={1000}
-                            value={editSpecValue}
-                            onChange={(e) => setEditSpecValue(e.target.value)}
-                          />
-                        </label>
-                        <label className="field">
-                          <span>Đơn vị</span>
-                          <input
-                            maxLength={50}
-                            value={editSpecUnit}
-                            onChange={(e) => setEditSpecUnit(e.target.value)}
-                          />
-                        </label>
-                        <label className="field">
-                          <span>Nguồn tài liệu</span>
-                          <input
-                            required
-                            maxLength={200}
-                            value={editSourceLabel}
-                            onChange={(e) => setEditSourceLabel(e.target.value)}
-                          />
-                        </label>
-                        <label className="field field-wide">
-                          <span>Trích dẫn nguyên văn</span>
-                          <input
-                            maxLength={2000}
-                            value={editSourceQuote}
-                            onChange={(e) => setEditSourceQuote(e.target.value)}
-                          />
-                        </label>
-                      </div>
-                      <div className="tender-form-actions">
-                        <button
-                          className="button button-secondary"
-                          type="button"
-                          onClick={() => setEditingSpecId(null)}
-                        >
-                          Hủy
-                        </button>
-                        <button className="button button-primary" disabled={busy} type="submit">
-                          Lưu thông số
-                        </button>
-                      </div>
-                    </form>
-                  ) : (
-                    <div
-                      key={spec.id}
-                      className={
-                        spec.hasConflict
-                          ? 'catalog-spec-row is-conflict'
-                          : 'catalog-spec-row'
-                      }
-                      role="row"
-                    >
-                      <div className="catalog-spec-key" role="cell">
+                    <span className="tender-item-no">{String(index + 1).padStart(2, '0')}</span>
+                    <div role="cell">
+                      <div className="catalog-spec-title-line">
                         <strong>{spec.specKey}</strong>
+                        <span className="catalog-source-pill">Nguồn: {spec.sourceLabel}</span>
                         {spec.hasConflict && (
                           <span className="catalog-conflict-badge">
                             ⚠ Xung đột giá trị giữa các nguồn
                           </span>
                         )}
                       </div>
-                      <div className="catalog-spec-value" role="cell">
-                        <strong>
-                          {spec.specValue}
-                          {spec.unit ? ` ${spec.unit}` : ''}
-                        </strong>
-                      </div>
-                      <div className="catalog-spec-source" role="cell">
-                        <span className="catalog-source-pill">Nguồn: {spec.sourceLabel}</span>
-                        {spec.sourceQuote && <p className="muted">“{spec.sourceQuote}”</p>}
-                      </div>
+                      {spec.sourceQuote && <p>“{spec.sourceQuote}”</p>}
+                    </div>
+                    <div className="tender-item-meta" role="cell">
+                      <span className="tender-item-quantity">
+                        {spec.specValue}
+                        {spec.unit ? ` ${spec.unit}` : ''}
+                      </span>
                       {isDraft && canWrite && (
-                        <div className="tender-item-actions" role="cell">
+                        <div className="tender-item-actions">
                           <button
-                            className="button button-secondary button-icon"
+                            className="tender-icon-button is-sm"
                             type="button"
                             disabled={busy}
                             onClick={() => startEditSpec(spec)}
@@ -973,7 +979,7 @@ export function CatalogDetailView({ slug, productId }: { slug: string; productId
                             <EditIcon />
                           </button>
                           <button
-                            className="button button-danger button-icon"
+                            className="tender-icon-button is-sm is-danger"
                             type="button"
                             disabled={busy}
                             onClick={() => void handleDeleteSpec(spec)}
@@ -985,13 +991,13 @@ export function CatalogDetailView({ slug, productId }: { slug: string; productId
                         </div>
                       )}
                     </div>
-                  ),
-                )}
-              </div>
-            )}
-          </div>
-        )}
-      </section>
+                  </div>
+                ),
+              )}
+            </div>
+          )}
+        </article>
+      )}
     </div>
   )
 }

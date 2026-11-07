@@ -269,6 +269,7 @@ it('renders role-tailored operational dashboard in Hoạt động and blocks ADM
     await screen.findByText('Trung tâm chuẩn hóa SKU, phiên bản bất biến & thông số kỹ thuật'),
   ).toBeTruthy()
   expect(screen.getByText('Xử lý 1 thông số kỹ thuật đang xung đột nguồn')).toBeTruthy()
+  expect(screen.getByRole('tab', { name: /Nhật ký sự kiện \(Log\)/i })).toBeTruthy()
 
   // ADMIN opening OWNER governance view is blocked
   render(
