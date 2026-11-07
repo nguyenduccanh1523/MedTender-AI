@@ -181,7 +181,7 @@ export class OrganizationsService {
           where: { organizationId },
           include: { actor: { select: { displayName: true } } },
           orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
-          take: 20,
+          take: 100,
         }),
       ])
 
@@ -377,12 +377,17 @@ export class OrganizationsService {
         })
       }
 
-      const timeline: WorkspaceTimelineItemDto[] = auditRows
+      const mappedAudits: WorkspaceTimelineItemDto[] = auditRows
         .filter((row) => {
-          if (canSeeTeam) return true
-          return !row.action.startsWith('ORG_')
+          const isOwnerOnlyAudit =
+            row.action.startsWith('ORG_GOVERNANCE_') ||
+            row.action === 'ORG_MEMBER_UPDATED' ||
+            row.action.startsWith('SECURITY_') ||
+            row.action === 'DOCUMENT_QUARANTINED'
+          if (isOwnerOnlyAudit) return role === 'OWNER'
+          if (row.action.startsWith('ORG_')) return canSeeTeam
+          return true
         })
-        .slice(0, 12)
         .map((row) => ({
           id: row.id,
           action: row.action,
@@ -396,6 +401,25 @@ export class OrganizationsService {
               ? `/${slug}/catalog`
               : null,
         }))
+
+      const loggedTenderIds = new Set(
+        auditRows.filter((r) => r.tenderId).map((r) => r.tenderId as string),
+      )
+      const fallbackTenderEvents: WorkspaceTimelineItemDto[] = tenders
+        .filter((t) => !loggedTenderIds.has(t.id))
+        .map((t) => ({
+          id: `tender-init-${t.id}`,
+          action: 'TENDER_CREATED',
+          summary: `Khởi tạo hồ sơ thầu "${t.title}" (${t.procurementStage} · ${t._count.lots} lot)`,
+          actorName: 'Quản lý đấu thầu',
+          actorRole: 'BID_MANAGER' as MembershipRole,
+          createdAt: t.createdAt,
+          href: `/${slug}/tenders/${t.id}`,
+        }))
+
+      const timeline: WorkspaceTimelineItemDto[] = [...mappedAudits, ...fallbackTenderEvents]
+        .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
+        .slice(0, 100)
 
       return {
         role,
