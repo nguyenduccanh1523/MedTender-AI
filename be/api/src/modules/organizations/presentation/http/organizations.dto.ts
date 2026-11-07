@@ -26,6 +26,14 @@ export class UpdateOrganizationGovernanceDto {
   @ApiProperty({ required: false }) requireIndependentReviewer?: boolean
   @ApiProperty({ required: false, enum: ['INTERNAL', 'CONFIDENTIAL', 'RESTRICTED'] })
   defaultDataClassification?: 'INTERNAL' | 'CONFIDENTIAL' | 'RESTRICTED'
+  @ApiProperty({ required: false, enum: ['OFF', 'INTERNAL_ONLY'] })
+  externalAiPolicy?: 'OFF' | 'INTERNAL_ONLY'
+  @ApiProperty({ required: false, minimum: 1, maximum: 50 })
+  maxLotsPerTender?: number
+  @ApiProperty({ required: false, minimum: 1, maximum: 500 })
+  maxItemsPerTender?: number
+  @ApiProperty({ required: false, minimum: 10, maximum: 500 })
+  maxSpecsPerVersion?: number
 }
 
 export class UpdateOrganizationMemberDto {
@@ -75,7 +83,7 @@ export class WorkspaceActivityDto {
 
 export class OrganizationGovernanceSettingsDto {
   @ApiProperty() requireIndependentReviewer!: boolean
-  @ApiProperty() externalAiPolicy!: 'OFF'
+  @ApiProperty({ enum: ['OFF', 'INTERNAL_ONLY'] }) externalAiPolicy!: 'OFF' | 'INTERNAL_ONLY'
   @ApiProperty({ enum: ['INTERNAL', 'CONFIDENTIAL', 'RESTRICTED'] })
   defaultDataClassification!: 'INTERNAL' | 'CONFIDENTIAL' | 'RESTRICTED'
   @ApiProperty() maxLotsPerTender!: number

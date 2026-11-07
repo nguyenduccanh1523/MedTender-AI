@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { useCallback, useEffect, useState, type FormEvent } from 'react'
 
 import { ApiError } from '../../../lib/api/client'
+import { ConfirmDialog } from '../../../components/ui/confirm-dialog'
 import { canManageCatalog, useWorkspaceRole } from '../../organizations/workspace-permissions'
 import {
   addCatalogSpecification,
@@ -123,6 +124,8 @@ export function CatalogDetailView({ slug, productId }: { slug: string; productId
   const [editSpecUnit, setEditSpecUnit] = useState('')
   const [editSourceLabel, setEditSourceLabel] = useState('')
   const [editSourceQuote, setEditSourceQuote] = useState('')
+  const [pendingDeleteSpec, setPendingDeleteSpec] = useState<ProductSpecification | null>(null)
+  const [savingSpecBusy, setSavingSpecBusy] = useState(false)
 
   const [onlyConflicts, setOnlyConflicts] = useState(false)
 
@@ -220,8 +223,12 @@ export function CatalogDetailView({ slug, productId }: { slug: string; productId
     )
   }
 
+  const visibleVersions = canWrite
+    ? product.versions
+    : product.versions.filter((v) => v.status !== 'DRAFT')
+
   const activeVersion: ProductVersionDetail | null =
-    product.versions.find((v) => v.id === selectedVersionId) ?? product.versions[0] ?? null
+    visibleVersions.find((v) => v.id === selectedVersionId) ?? visibleVersions[0] ?? null
   const isDraft = activeVersion?.status === 'DRAFT'
 
   async function handleUpdateProduct(event: FormEvent<HTMLFormElement>) {
@@ -321,13 +328,15 @@ export function CatalogDetailView({ slug, productId }: { slug: string; productId
 
   async function handleAddSpec(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    if (!canWrite || !activeVersion) return
+    if (!canWrite || !activeVersion || savingSpecBusy) return
+    const savedName = specKey.trim()
     setBusy(true)
+    setSavingSpecBusy(true)
     setError(null)
     setNotice(null)
     try {
       await addCatalogSpecification(slug, productId, activeVersion.id, {
-        specKey: specKey.trim(),
+        specKey: savedName,
         specValue: specValue.trim(),
         unit: specUnit.trim() || undefined,
         sourceLabel: sourceLabel.trim(),
@@ -340,11 +349,12 @@ export function CatalogDetailView({ slug, productId }: { slug: string; productId
       setSourceQuote('')
       setAddingSpec(false)
       await loadProduct(activeVersion.id)
-      setNotice('Đã thêm thông số kỹ thuật kèm truy vết nguồn.')
+      setNotice(`Đã lưu thông số kỹ thuật "${savedName}" kèm truy vết nguồn vào ${activeVersion.versionLabel}.`)
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Không thêm được thông số kỹ thuật.')
     } finally {
       setBusy(false)
+      setSavingSpecBusy(false)
     }
   }
 
@@ -359,12 +369,15 @@ export function CatalogDetailView({ slug, productId }: { slug: string; productId
 
   async function handleSaveSpec(event: FormEvent<HTMLFormElement>, specId: string) {
     event.preventDefault()
-    if (!canWrite || !activeVersion) return
+    if (!canWrite || !activeVersion || savingSpecBusy) return
+    const savedName = editSpecKey.trim()
     setBusy(true)
+    setSavingSpecBusy(true)
     setError(null)
+    setNotice(null)
     try {
       await updateCatalogSpecification(slug, productId, activeVersion.id, specId, {
-        specKey: editSpecKey.trim(),
+        specKey: savedName,
         specValue: editSpecValue.trim(),
         unit: editSpecUnit.trim() || null,
         sourceLabel: editSourceLabel.trim(),
@@ -372,21 +385,27 @@ export function CatalogDetailView({ slug, productId }: { slug: string; productId
       })
       setEditingSpecId(null)
       await loadProduct(activeVersion.id)
+      setNotice(`Đã cập nhật thông số kỹ thuật "${savedName}" và nguồn tài liệu.`)
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Không cập nhật được thông số.')
     } finally {
       setBusy(false)
+      setSavingSpecBusy(false)
     }
   }
 
-  async function handleDeleteSpec(spec: ProductSpecification) {
-    if (!canWrite || !activeVersion) return
-    if (!window.confirm(`Xóa thông số "${spec.specKey}" khỏi phiên bản ${activeVersion.versionLabel}?`)) return
+  async function confirmDeleteSpec() {
+    if (!canWrite || !activeVersion || !pendingDeleteSpec) return
+    const target = pendingDeleteSpec
     setBusy(true)
     setError(null)
+    setNotice(null)
     try {
-      await removeCatalogSpecification(slug, productId, activeVersion.id, spec.id)
+      await removeCatalogSpecification(slug, productId, activeVersion.id, target.id)
+      setPendingDeleteSpec(null)
+      setOnlyConflicts(false)
       await loadProduct(activeVersion.id)
+      setNotice(`Đã xóa thông số "${target.specKey}" (Nguồn: ${target.sourceLabel}) khỏi ${activeVersion.versionLabel}.`)
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Không xóa được thông số.')
     } finally {
@@ -394,8 +413,9 @@ export function CatalogDetailView({ slug, productId }: { slug: string; productId
     }
   }
 
+  const effectiveOnlyConflicts = onlyConflicts && (activeVersion?.conflictCount ?? 0) > 0
   const displayedSpecs = activeVersion
-    ? onlyConflicts
+    ? effectiveOnlyConflicts
       ? activeVersion.specifications.filter((s) => s.hasConflict)
       : activeVersion.specifications
     : []
@@ -487,7 +507,7 @@ export function CatalogDetailView({ slug, productId }: { slug: string; productId
             </div>
             <div className="tender-inline-actions">
               <button className="button button-primary" disabled={busy} type="submit">
-                Lưu thay đổi
+                {busy ? 'Đang lưu thay đổi…' : 'Lưu thay đổi'}
               </button>
             </div>
           </form>
@@ -620,7 +640,7 @@ export function CatalogDetailView({ slug, productId }: { slug: string; productId
           </div>
           <div className="tender-inline-actions">
             <button className="button button-primary" disabled={busy} type="submit">
-              Khởi tạo phiên bản mới
+              {busy ? 'Đang khởi tạo phiên bản…' : 'Khởi tạo phiên bản mới'}
             </button>
           </div>
         </form>
@@ -628,7 +648,7 @@ export function CatalogDetailView({ slug, productId }: { slug: string; productId
 
       <div className="tender-subtabs-bar">
         <div className="tender-subtabs" role="tablist" aria-label="Danh sách phiên bản sản phẩm">
-          {product.versions.map((ver) => {
+          {visibleVersions.map((ver) => {
             const isSelected = ver.id === activeVersion?.id
             return (
               <button
@@ -642,6 +662,7 @@ export function CatalogDetailView({ slug, productId }: { slug: string; productId
                   setEditingVersionMeta(false)
                   setAddingSpec(false)
                   setEditingSpecId(null)
+                  setOnlyConflicts(false)
                 }}
               >
                 <span>
@@ -679,7 +700,7 @@ export function CatalogDetailView({ slug, productId }: { slug: string; productId
               disabled={busy}
               onClick={handlePublishVersion}
             >
-              Xuất bản {activeVersion.versionLabel}
+              {busy ? 'Đang xuất bản…' : `Xuất bản ${activeVersion.versionLabel}`}
             </button>
           </div>
         )}
@@ -709,9 +730,13 @@ export function CatalogDetailView({ slug, productId }: { slug: string; productId
               </p>
             </div>
 
-            {!isDraft && (
+            {!isDraft ? (
               <span className="catalog-immutable-lock">
                 🔒 Đã khóa bất biến — Tạo phiên bản mới nếu cần cập nhật thông số
+              </span>
+            ) : (
+              <span className="catalog-immutable-lock">
+                👁 Bản nháp nội bộ (Chỉ người quản lý Catalog mới thấy — Xuất bản để mở cho toàn tổ chức)
               </span>
             )}
           </div>
@@ -753,7 +778,7 @@ export function CatalogDetailView({ slug, productId }: { slug: string; productId
               </div>
               <div className="tender-inline-actions">
                 <button className="button button-primary" disabled={busy} type="submit">
-                  Lưu phiên bản
+                  {busy ? 'Đang lưu phiên bản…' : 'Lưu phiên bản'}
                 </button>
               </div>
             </form>
@@ -831,8 +856,8 @@ export function CatalogDetailView({ slug, productId }: { slug: string; productId
                 </label>
               </div>
               <div className="tender-inline-actions">
-                <button className="button button-primary" disabled={busy} type="submit">
-                  Lưu thông số & Nguồn
+                <button className="button button-primary" disabled={busy || savingSpecBusy} type="submit">
+                  {savingSpecBusy ? 'Đang lưu thông số & nguồn…' : 'Lưu thông số & Nguồn'}
                 </button>
               </div>
             </form>
@@ -933,8 +958,8 @@ export function CatalogDetailView({ slug, productId }: { slug: string; productId
                       </label>
                     </div>
                     <div className="tender-inline-actions">
-                      <button className="button button-primary" disabled={busy} type="submit">
-                        Lưu thông số
+                      <button className="button button-primary" disabled={busy || savingSpecBusy} type="submit">
+                        {savingSpecBusy ? 'Đang lưu thông số…' : 'Lưu thông số'}
                       </button>
                     </div>
                   </form>
@@ -982,7 +1007,7 @@ export function CatalogDetailView({ slug, productId }: { slug: string; productId
                             className="tender-icon-button is-sm is-danger"
                             type="button"
                             disabled={busy}
-                            onClick={() => void handleDeleteSpec(spec)}
+                            onClick={() => setPendingDeleteSpec(spec)}
                             aria-label={`Xóa thông số ${spec.specKey}`}
                             title="Xóa thông số"
                           >
@@ -998,6 +1023,24 @@ export function CatalogDetailView({ slug, productId }: { slug: string; productId
           )}
         </article>
       )}
+
+      <ConfirmDialog
+        open={Boolean(pendingDeleteSpec)}
+        badge={activeVersion ? `${product.sku} · ${activeVersion.versionLabel}` : product.sku}
+        title={
+          pendingDeleteSpec
+            ? `Xóa thông số "${pendingDeleteSpec.specKey}"?`
+            : 'Xác nhận xóa thông số'
+        }
+        description={
+          pendingDeleteSpec
+            ? `Thông số có giá trị "${pendingDeleteSpec.specValue}${pendingDeleteSpec.unit ? ` ${pendingDeleteSpec.unit}` : ''}" trích dẫn từ nguồn "${pendingDeleteSpec.sourceLabel}" sẽ bị xóa khỏi phiên bản nháp ${activeVersion?.versionLabel ?? ''}.`
+            : ''
+        }
+        busy={busy}
+        onCancel={() => setPendingDeleteSpec(null)}
+        onConfirm={() => void confirmDeleteSpec()}
+      />
     </div>
   )
 }

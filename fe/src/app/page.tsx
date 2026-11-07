@@ -1,6 +1,6 @@
 import Link from 'next/link'
 
-import { Logo } from '../components/brand/logo'
+import { MarketingFooter } from '../features/marketing/components/marketing-footer'
 import { MarketingHeader } from '../features/marketing/components/marketing-header'
 
 const outcomes = [
@@ -30,7 +30,7 @@ export default function HomePage() {
         <div><p className="eyebrow">Vận hành có kiểm soát</p><h2 id="operating-model-title">Một workspace chung, nhưng mỗi người chỉ thấy đúng phần việc của mình.</h2><p>Hệ thống tách rõ trách nhiệm của tổ chức, đội vận hành và người đánh giá để quy trình không phụ thuộc vào một cá nhân.</p></div>
         <ol><li><span>01</span><div><strong>Hồ sơ được phê duyệt</strong><p>Tổ chức gửi thông tin, System Admin kiểm tra và tạo workspace sau khi phê duyệt.</p></div></li><li><span>02</span><div><strong>Đội ngũ được cấp quyền</strong><p>OWNER và ADMIN mời các vai trò nghiệp vụ theo đúng phạm vi công việc.</p></div></li><li><span>03</span><div><strong>Quyết định được lưu vết</strong><p>Bằng chứng, tiêu chí và kết quả rà soát được giữ cùng một bối cảnh.</p></div></li></ol>
       </section>
-      <footer className="enterprise-footer"><Logo /><p>MedTender AI · Mua sắm y tế minh bạch hơn.</p><Link href="/login">Vào workspace →</Link></footer>
+      <MarketingFooter />
     </main>
   )
 }

@@ -36,14 +36,37 @@ function parseGovernanceSettings(raw: unknown): OrganizationGovernanceSettingsDt
     obj.defaultDataClassification === 'RESTRICTED'
       ? obj.defaultDataClassification
       : 'CONFIDENTIAL'
+  const rawExternalAi = obj.externalAiPolicy === 'INTERNAL_ONLY' ? 'INTERNAL_ONLY' : 'OFF'
+  const externalAiPolicy = classification === 'INTERNAL' ? rawExternalAi : 'OFF'
+  const maxLots =
+    typeof obj.maxLotsPerTender === 'number' &&
+    Number.isInteger(obj.maxLotsPerTender) &&
+    obj.maxLotsPerTender >= 1 &&
+    obj.maxLotsPerTender <= 50
+      ? obj.maxLotsPerTender
+      : 20
+  const maxItems =
+    typeof obj.maxItemsPerTender === 'number' &&
+    Number.isInteger(obj.maxItemsPerTender) &&
+    obj.maxItemsPerTender >= 1 &&
+    obj.maxItemsPerTender <= 500
+      ? obj.maxItemsPerTender
+      : 100
+  const maxSpecs =
+    typeof obj.maxSpecsPerVersion === 'number' &&
+    Number.isInteger(obj.maxSpecsPerVersion) &&
+    obj.maxSpecsPerVersion >= 10 &&
+    obj.maxSpecsPerVersion <= 500
+      ? obj.maxSpecsPerVersion
+      : 200
   return {
     requireIndependentReviewer:
       typeof obj.requireIndependentReviewer === 'boolean' ? obj.requireIndependentReviewer : true,
-    externalAiPolicy: 'OFF',
+    externalAiPolicy,
     defaultDataClassification: classification,
-    maxLotsPerTender: 20,
-    maxItemsPerTender: 100,
-    maxSpecsPerVersion: 200,
+    maxLotsPerTender: maxLots,
+    maxItemsPerTender: maxItems,
+    maxSpecsPerVersion: maxSpecs,
   }
 }
 
@@ -480,6 +503,40 @@ export class OrganizationsService {
       if (!['INTERNAL', 'CONFIDENTIAL', 'RESTRICTED'].includes(nextClassification)) {
         throw new BadRequestException('Phân loại bảo mật dữ liệu mặc định không hợp lệ.')
       }
+
+      const requestedAiPolicy =
+        body.externalAiPolicy !== undefined
+          ? body.externalAiPolicy
+          : currentSettings.externalAiPolicy
+      if (!['OFF', 'INTERNAL_ONLY'].includes(requestedAiPolicy)) {
+        throw new BadRequestException('Chính sách AI bên ngoài không hợp lệ.')
+      }
+      const nextAiPolicy = nextClassification === 'INTERNAL' ? requestedAiPolicy : 'OFF'
+
+      const nextMaxLots =
+        body.maxLotsPerTender !== undefined
+          ? Number(body.maxLotsPerTender)
+          : currentSettings.maxLotsPerTender
+      if (!Number.isInteger(nextMaxLots) || nextMaxLots < 1 || nextMaxLots > 50) {
+        throw new BadRequestException('Hạn mức số Lot mỗi hồ sơ thầu phải từ 1 đến 50.')
+      }
+
+      const nextMaxItems =
+        body.maxItemsPerTender !== undefined
+          ? Number(body.maxItemsPerTender)
+          : currentSettings.maxItemsPerTender
+      if (!Number.isInteger(nextMaxItems) || nextMaxItems < 1 || nextMaxItems > 500) {
+        throw new BadRequestException('Hạn mức số Item mỗi hồ sơ thầu phải từ 1 đến 500.')
+      }
+
+      const nextMaxSpecs =
+        body.maxSpecsPerVersion !== undefined
+          ? Number(body.maxSpecsPerVersion)
+          : currentSettings.maxSpecsPerVersion
+      if (!Number.isInteger(nextMaxSpecs) || nextMaxSpecs < 10 || nextMaxSpecs > 500) {
+        throw new BadRequestException('Hạn mức thông số mỗi phiên bản Catalog phải từ 10 đến 500.')
+      }
+
       const nextSettings: OrganizationGovernanceSettingsDto = {
         ...currentSettings,
         requireIndependentReviewer:
@@ -487,6 +544,10 @@ export class OrganizationsService {
             ? body.requireIndependentReviewer
             : currentSettings.requireIndependentReviewer,
         defaultDataClassification: nextClassification,
+        externalAiPolicy: nextAiPolicy,
+        maxLotsPerTender: nextMaxLots,
+        maxItemsPerTender: nextMaxItems,
+        maxSpecsPerVersion: nextMaxSpecs,
       }
 
       await tx.organization.update({

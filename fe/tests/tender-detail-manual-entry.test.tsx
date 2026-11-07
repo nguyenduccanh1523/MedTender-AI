@@ -182,6 +182,7 @@ it('edits tender metadata, updates/deletes an item and opens the audit log', asy
 
   fireEvent.click(screen.getByRole('tab', { name: /Lot & dòng hàng hóa/ }))
   fireEvent.click(screen.getByRole('button', { name: 'Xóa Monitor 7 thông số' }))
+  fireEvent.click(await screen.findByRole('button', { name: 'Xác nhận xóa' }))
   await waitFor(() => expect(screen.queryByText('Monitor 7 thông số')).toBeNull())
 })
 

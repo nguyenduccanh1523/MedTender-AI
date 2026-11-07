@@ -168,8 +168,18 @@ export class CatalogService {
 
   async list(userId: string, slug: string, rawQuery?: Record<string, unknown>) {
     const parsed = parseCatalogListQuery(rawQuery)
-    return this.organizations.withWorkspace(userId, slug, async (tx, organizationId) => {
+    return this.organizations.withWorkspace(userId, slug, async (tx, organizationId, role) => {
+      const canSeeDrafts = catalogWriters.has(role)
+      const versionWhere: Prisma.ProductVersionWhereInput | undefined = canSeeDrafts
+        ? undefined
+        : { status: { in: ['PUBLISHED', 'SUPERSEDED'] } }
+
       const filterConditions: Prisma.ProductWhereInput[] = [{ organizationId }]
+      if (!canSeeDrafts) {
+        filterConditions.push({
+          versions: { some: { status: { in: ['PUBLISHED', 'SUPERSEDED'] } } },
+        })
+      }
       if (parsed.status) filterConditions.push({ status: parsed.status })
       if (parsed.q) {
         filterConditions.push({
@@ -197,7 +207,10 @@ export class CatalogService {
         updatedAt: Date
         versions: VersionWithSpecs[]
       }): ProductSummaryDto => {
-        const formatted = product.versions.map(formatVersionDetail)
+        const visibleRawVersions = canSeeDrafts
+          ? product.versions
+          : product.versions.filter((v) => v.status !== 'DRAFT')
+        const formatted = visibleRawVersions.map(formatVersionDetail)
         const latest = formatted[0] ? toVersionSummary(formatted[0]) : null
         const publishedDetail = formatted.find((v) => v.status === 'PUBLISHED')
         const published = publishedDetail ? toVersionSummary(publishedDetail) : null
@@ -223,6 +236,7 @@ export class CatalogService {
           where: baseWhere,
           include: {
             versions: {
+              where: versionWhere,
               orderBy: { versionNumber: 'desc' },
               include: {
                 specifications: { orderBy: [{ specKey: 'asc' }, { createdAt: 'asc' }] },
@@ -254,6 +268,7 @@ export class CatalogService {
           where,
           include: {
             versions: {
+              where: versionWhere,
               orderBy: { versionNumber: 'desc' },
               include: {
                 specifications: { orderBy: [{ specKey: 'asc' }, { createdAt: 'asc' }] },
@@ -398,11 +413,13 @@ export class CatalogService {
   }
 
   async detail(userId: string, slug: string, productId: string): Promise<ProductDetailDto> {
-    return this.organizations.withWorkspace(userId, slug, async (tx, organizationId) => {
+    return this.organizations.withWorkspace(userId, slug, async (tx, organizationId, role) => {
+      const canSeeDrafts = catalogWriters.has(role)
       const product = await tx.product.findFirst({
         where: { id: productId, organizationId },
         include: {
           versions: {
+            where: canSeeDrafts ? undefined : { status: { in: ['PUBLISHED', 'SUPERSEDED'] } },
             orderBy: { versionNumber: 'desc' },
             include: {
               specifications: { orderBy: [{ specKey: 'asc' }, { createdAt: 'asc' }] },
@@ -411,7 +428,15 @@ export class CatalogService {
         },
       })
       if (!product) throw new NotFoundException('Không tìm thấy sản phẩm trong catalog.')
-      return this.formatProductDetail(product)
+      const visibleVersions = canSeeDrafts
+        ? product.versions
+        : product.versions.filter((v) => v.status !== 'DRAFT')
+      if (!canSeeDrafts && visibleVersions.length === 0) {
+        throw new NotFoundException(
+          'Sản phẩm này đang ở trạng thái Bản nháp và chưa có phiên bản xuất bản chính thức.',
+        )
+      }
+      return this.formatProductDetail({ ...product, versions: visibleVersions })
     })
   }
 
@@ -607,7 +632,7 @@ export class CatalogService {
     slug: string,
     versionId: string,
   ): Promise<ProductVersionDetailDto> {
-    return this.organizations.withWorkspace(userId, slug, async (tx, organizationId) => {
+    return this.organizations.withWorkspace(userId, slug, async (tx, organizationId, role) => {
       const version = await tx.productVersion.findFirst({
         where: { id: versionId, organizationId },
         include: {
@@ -615,6 +640,11 @@ export class CatalogService {
         },
       })
       if (!version) throw new NotFoundException('Không tìm thấy phiên bản sản phẩm.')
+      if (version.status === 'DRAFT' && !catalogWriters.has(role)) {
+        throw new NotFoundException(
+          'Phiên bản Bản nháp chỉ hiển thị cho người quản lý Catalog (OWNER, ADMIN, CATALOG_MANAGER).',
+        )
+      }
       return formatVersionDetail(version)
     })
   }

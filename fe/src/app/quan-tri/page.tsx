@@ -1,5 +1,6 @@
 import Link from 'next/link'
 
+import { MarketingFooter } from '../../features/marketing/components/marketing-footer'
 import { MarketingHeader } from '../../features/marketing/components/marketing-header'
 
 const approval = [
@@ -51,6 +52,7 @@ export default function GovernancePage() {
       </section>
 
       <section className="governance-v2-closing"><div><p className="eyebrow">SẴN SÀNG BẮT ĐẦU?</p><h2>Gửi thông tin tổ chức để được xem xét cấp quyền.</h2></div><Link className="button enterprise-cta" href="/apply">Gửi hồ sơ tổ chức <span aria-hidden="true">↗</span></Link></section>
+      <MarketingFooter />
     </main>
   )
 }

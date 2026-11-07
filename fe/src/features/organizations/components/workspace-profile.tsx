@@ -17,18 +17,33 @@ import { readCachedOrganization } from '../organization-cache'
 import { roleLabels } from '../roles'
 import { useWorkspaceRole } from '../workspace-permissions'
 
+const ROLE_SUFFIX_PATTERN =
+  /\s+(Owner|Admin|Bid Manager|Catalog Manager|Analyst|Reviewer|Viewer|BID_MANAGER|CATALOG_MANAGER|OWNER|ADMIN|ANALYST|REVIEWER|VIEWER)$/i
+
+export function cleanPersonalName(rawName: string | undefined | null): string {
+  if (!rawName) return 'Người dùng MedTender'
+  const trimmed = rawName.trim()
+  const cleaned = trimmed.replace(ROLE_SUFFIX_PATTERN, '').trim()
+  return cleaned.length >= 2 ? cleaned : trimmed
+}
+
+export function hasRoleSuffixInName(rawName: string | undefined | null): boolean {
+  if (!rawName) return false
+  return ROLE_SUFFIX_PATTERN.test(rawName.trim())
+}
+
 const rolePermissionsSummary: Record<Organization['role'], ReadonlyArray<{ label: string; allowed: boolean }>> = {
   OWNER: [
     { label: 'Tạo, chỉnh sửa và xóa hồ sơ thầu / lot / hàng hóa', allowed: true },
-    { label: 'Xem nhật ký thay đổi (Audit log) của hồ sơ thầu', allowed: true },
-    { label: 'Quản trị thành viên, lời mời và phân quyền tổ chức', allowed: true },
-    { label: 'Cấu hình chính sách dữ liệu và AI của tổ chức', allowed: true },
+    { label: 'Xem nhật ký thay đổi (Audit log) của hồ sơ thầu và cấp tổ chức', allowed: true },
+    { label: 'Quản trị thành viên, bổ nhiệm ADMIN và phân quyền tổ chức', allowed: true },
+    { label: 'Cấu hình chính sách dữ liệu, hạn mức và AI của tổ chức', allowed: true },
   ],
   ADMIN: [
     { label: 'Tạo, chỉnh sửa và xóa hồ sơ thầu / lot / hàng hóa', allowed: true },
     { label: 'Xem nhật ký thay đổi (Audit log) của hồ sơ thầu', allowed: true },
     { label: 'Mời và quản lý thành viên nghiệp vụ trong tổ chức', allowed: true },
-    { label: 'Cấu hình chính sách dữ liệu và AI của tổ chức', allowed: true },
+    { label: 'Quản lý danh mục sản phẩm và phiên bản thông số kỹ thuật', allowed: true },
   ],
   BID_MANAGER: [
     { label: 'Tạo, chỉnh sửa và xóa hồ sơ thầu / lot / hàng hóa', allowed: true },
@@ -63,15 +78,15 @@ const rolePermissionsSummary: Record<Organization['role'], ReadonlyArray<{ label
 }
 
 function getInitials(name: string) {
-  const parts = name.trim().split(/\s+/).filter(Boolean)
+  const parts = cleanPersonalName(name).trim().split(/\s+/).filter(Boolean)
   if (parts.length === 0) return 'MT'
   if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase()
   return `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase()
 }
 
-export function WorkspaceProfile({ slug }: { slug: string }) {
+export function WorkspaceProfile({ slug }: { slug?: string }) {
   const workspaceRole = useWorkspaceRole()
-  const currentOrg = readCachedOrganization(slug)
+  const currentOrg = slug ? readCachedOrganization(slug) : undefined
   const [user, setUser] = useState<PublicUser | undefined>(() => readCachedUser())
   const [organizations, setOrganizations] = useState<Organization[] | undefined>(() =>
     readResource<Organization[]>('organizations'),
@@ -118,7 +133,7 @@ export function WorkspaceProfile({ slug }: { slug: string }) {
       saveCachedUser(updated)
       setUser(updated)
       setNameInput(updated.name)
-      setProfileMessage('Đã cập nhật họ tên hiển thị.')
+      setProfileMessage('Đã cập nhật họ tên cá nhân hiển thị trên toàn hệ thống.')
     } catch (cause) {
       setProfileError(cause instanceof Error ? cause.message : 'Không cập nhật được hồ sơ.')
     } finally {
@@ -157,8 +172,10 @@ export function WorkspaceProfile({ slug }: { slug: string }) {
     applyTheme(mode)
   }
 
-  const effectiveRole = workspaceRole ?? currentOrg?.role ?? 'VIEWER'
+  const effectiveRole = workspaceRole ?? currentOrg?.role ?? organizations?.[0]?.role ?? 'VIEWER'
   const permissions = rolePermissionsSummary[effectiveRole]
+  const suggestedCleanName = cleanPersonalName(nameInput)
+  const showCleanSuggestion = hasRoleSuffixInName(nameInput) && suggestedCleanName !== nameInput.trim()
 
   return (
     <div className="profile-page">
@@ -169,7 +186,11 @@ export function WorkspaceProfile({ slug }: { slug: string }) {
           </div>
           <div className="profile-identity-copy">
             <div className="profile-badges">
-              <span className="profile-role-pill">{roleLabels[effectiveRole]}</span>
+              {slug ? (
+                <span className="profile-role-pill">{roleLabels[effectiveRole]}</span>
+              ) : (
+                <span className="profile-role-pill">Tài khoản Đa tổ chức</span>
+              )}
               <span className="profile-status-pill">
                 <i aria-hidden="true" /> Đang xác thực
               </span>
@@ -177,14 +198,24 @@ export function WorkspaceProfile({ slug }: { slug: string }) {
                 <span className="profile-sysadmin-pill">SYSTEM ADMIN</span>
               )}
             </div>
-            <h2>{user?.name || 'Tài khoản MedTender'}</h2>
+            <h2>{cleanPersonalName(user?.name) || 'Tài khoản MedTender'}</h2>
             <p>{user?.email || 'Đang đồng bộ email…'}</p>
           </div>
         </div>
         <div className="profile-org-context">
-          <span>Tổ chức hiện tại</span>
-          <strong>{currentOrg?.name || slug}</strong>
-          <small>Mã định danh: /{slug}</small>
+          {slug ? (
+            <>
+              <span>Tổ chức đang mở</span>
+              <strong>{currentOrg?.name || slug}</strong>
+              <small>Mã định danh: /{slug} · Vai trò: {roleLabels[effectiveRole]}</small>
+            </>
+          ) : (
+            <>
+              <span>Phạm vi quản lý</span>
+              <strong>Cổng tài khoản cá nhân độc lập</strong>
+              <small>Tham gia {organizations?.length ?? 0} tổ chức · Phân quyền độc lập theo từng nơi</small>
+            </>
+          )}
         </div>
       </section>
 
@@ -192,13 +223,13 @@ export function WorkspaceProfile({ slug }: { slug: string }) {
         <section className="surface profile-card" aria-label="Cập nhật thông tin cá nhân">
           <div className="profile-card-head">
             <div>
-              <p className="eyebrow">Định danh</p>
+              <p className="eyebrow">Định danh độc lập</p>
               <h3>Thông tin cá nhân</h3>
             </div>
           </div>
           <form className="stack-form profile-form" onSubmit={submitProfile}>
             <label>
-              Họ và tên hiển thị
+              Họ và tên cá nhân <span>(không gắn kèm chức danh tổ chức)</span>
               <input
                 name="name"
                 value={nameInput}
@@ -206,9 +237,23 @@ export function WorkspaceProfile({ slug }: { slug: string }) {
                 required
                 minLength={2}
                 maxLength={100}
-                placeholder="Nhập họ và tên"
+                placeholder="Nhập họ và tên thật của bạn"
               />
             </label>
+            {showCleanSuggestion && (
+              <div className="profile-clean-name-hint">
+                <span>
+                  Tên tài khoản demo đang chứa hậu tố vai trò (<code>{nameInput}</code>). Vì một tài khoản có thể giữ nhiều vai trò khác nhau ở các tổ chức khác nhau, bạn nên đổi về tên cá nhân chuẩn:
+                </span>
+                <button
+                  type="button"
+                  className="tender-chip-button"
+                  onClick={() => setNameInput(suggestedCleanName)}
+                >
+                  Dùng tên &ldquo;{suggestedCleanName}&rdquo;
+                </button>
+              </div>
+            )}
             <label>
               Địa chỉ Email <span>(định danh đăng nhập cố định)</span>
               <input value={user?.email ?? ''} disabled readOnly />
@@ -284,8 +329,12 @@ export function WorkspaceProfile({ slug }: { slug: string }) {
         <section className="surface profile-card" aria-label="Phạm vi quyền hạn trong tổ chức">
           <div className="profile-card-head">
             <div>
-              <p className="eyebrow">Phân quyền RBAC</p>
-              <h3>Quyền hạn của {roleLabels[effectiveRole]}</h3>
+              <p className="eyebrow">Phân quyền RBAC theo tổ chức</p>
+              <h3>
+                {slug
+                  ? `Quyền hạn của ${roleLabels[effectiveRole]} tại ${currentOrg?.name || slug}`
+                  : `Quyền hạn tham chiếu (${roleLabels[effectiveRole]})`}
+              </h3>
             </div>
           </div>
           <ul className="profile-permission-list">
@@ -315,30 +364,35 @@ export function WorkspaceProfile({ slug }: { slug: string }) {
         <section className="surface profile-card" aria-label="Danh sách tổ chức thành viên">
           <div className="profile-card-head">
             <div>
-              <p className="eyebrow">Đa tổ chức (Multi-tenant)</p>
-              <h3>Tổ chức bạn tham gia</h3>
+              <p className="eyebrow">Đa tổ chức (Multi-tenant RBAC)</p>
+              <h3>Ma trận vai trò theo từng tổ chức</h3>
             </div>
-            <Link className="tender-text-button" href="/organizations">
-              Đổi tổ chức →
-            </Link>
+            {slug && (
+              <Link className="tender-text-button" href="/organizations">
+                Cổng tổ chức →
+              </Link>
+            )}
           </div>
+          <p className="muted" style={{ fontSize: '0.82rem', marginBottom: '0.65rem' }}>
+            Cùng một tài khoản cá nhân nhưng mỗi tổ chức cấp cho bạn một vai trò (Role) hoàn toàn độc lập:
+          </p>
           {!organizations || organizations.length === 0 ? (
             <p className="muted">Đang tải danh sách tổ chức…</p>
           ) : (
             <ul className="profile-org-list">
               {organizations.map((org) => (
-                <li key={org.id} className={org.slug === slug ? 'is-current' : undefined}>
+                <li key={org.id} className={slug && org.slug === slug ? 'is-current' : undefined}>
                   <div>
                     <strong>{org.name}</strong>
                     <small>/{org.slug}</small>
                   </div>
                   <div className="profile-org-right">
-                    <span className="profile-org-role">{roleLabels[org.role]}</span>
-                    {org.slug === slug ? (
+                    <span className="profile-org-role">{roleLabels[org.role]} ({org.role})</span>
+                    {slug && org.slug === slug ? (
                       <span className="profile-org-active">Đang mở</span>
                     ) : (
                       <Link href={`/${org.slug}`} className="tender-text-button">
-                        Chuyển
+                        Mở Workspace →
                       </Link>
                     )}
                   </div>

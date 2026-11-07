@@ -8,7 +8,7 @@ const overviewByRole: Record<Organization['role'], Overview> = {
   ADMIN: { title: 'Điều phối đội ngũ mua sắm', copy: 'Duy trì quyền truy cập và hỗ trợ các nhóm làm việc đúng vai trò.', action: 'Quản lý thành viên', signal: 'Quyền quản trị đang hoạt động', governance: true },
   BID_MANAGER: { title: 'Sẵn sàng điều phối hồ sơ thầu', copy: 'Tạo hồ sơ mua sắm và theo dõi các tender trong tổ chức.', action: 'Quản lý hồ sơ thầu', signal: 'Quyền tạo hồ sơ đang hoạt động' },
   ANALYST: { title: 'Bắt đầu từ hồ sơ nguồn', copy: 'Xem tender hiện có để chuẩn bị cho luồng phân tích ở bước tiếp theo.', action: 'Xem hồ sơ thầu', signal: 'Quyền xem đang hoạt động' },
-  CATALOG_MANAGER: { title: 'Theo dõi nhu cầu từ hồ sơ', copy: 'Xem tender trong tổ chức; quản lý catalog sẽ được triển khai ở module tiếp theo.', action: 'Xem hồ sơ thầu', signal: 'Quyền xem đang hoạt động' },
+  CATALOG_MANAGER: { title: 'Chuẩn hóa danh mục & phiên bản thiết bị', copy: 'Quản lý SKU, biên tập thông số kỹ thuật có trích dẫn nguồn và xuất bản phiên bản sản phẩm bất biến.', action: 'Quản lý Catalog thiết bị', signal: 'Quyền quản lý Catalog đang hoạt động' },
   REVIEWER: { title: 'Nắm bối cảnh trước khi review', copy: 'Xem hồ sơ thầu; quyết định review chỉ mở khi có module analysis và bằng chứng.', action: 'Xem hồ sơ thầu', signal: 'Quyền xem đang hoạt động' },
   VIEWER: { title: 'Theo dõi thông tin được chia sẻ', copy: 'Bạn có thể đọc hồ sơ thầu thuộc tổ chức theo quyền hiện tại.', action: 'Xem hồ sơ thầu', signal: 'Chế độ chỉ xem' },
 }

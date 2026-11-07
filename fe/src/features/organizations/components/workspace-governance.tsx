@@ -61,6 +61,11 @@ export function WorkspaceGovernanceView({ slug }: { slug: string }) {
   const [classification, setClassification] = useState<'INTERNAL' | 'CONFIDENTIAL' | 'RESTRICTED'>(
     'CONFIDENTIAL',
   )
+  const [externalAiPolicy, setExternalAiPolicy] = useState<'OFF' | 'INTERNAL_ONLY'>('OFF')
+  const [maxLotsPerTender, setMaxLotsPerTender] = useState(20)
+  const [maxItemsPerTender, setMaxItemsPerTender] = useState(100)
+  const [maxSpecsPerVersion, setMaxSpecsPerVersion] = useState(200)
+
   const [savingPolicy, setSavingPolicy] = useState(false)
   const [policyNotice, setPolicyNotice] = useState<string | null>(null)
   const [memberSavingId, setMemberSavingId] = useState<string | null>(null)
@@ -68,6 +73,17 @@ export function WorkspaceGovernanceView({ slug }: { slug: string }) {
   const [auditScope, setAuditScope] = useState<AuditScopeFilter>('ALL')
   const [auditLimit, setAuditLimit] = useState(10)
   const [auditPage, setAuditPage] = useState(1)
+
+  const applyGovState = useCallback((gov: OrganizationGovernance) => {
+    setData(gov)
+    setOrgName(gov.name)
+    setRequireReviewer(gov.settings.requireIndependentReviewer)
+    setClassification(gov.settings.defaultDataClassification)
+    setExternalAiPolicy(gov.settings.externalAiPolicy)
+    setMaxLotsPerTender(gov.settings.maxLotsPerTender)
+    setMaxItemsPerTender(gov.settings.maxItemsPerTender)
+    setMaxSpecsPerVersion(gov.settings.maxSpecsPerVersion)
+  }, [])
 
   const load = useCallback(async () => {
     if (!isOwner) {
@@ -78,16 +94,13 @@ export function WorkspaceGovernanceView({ slug }: { slug: string }) {
     setError(null)
     try {
       const gov = await getOrganizationGovernance(slug)
-      setData(gov)
-      setOrgName(gov.name)
-      setRequireReviewer(gov.settings.requireIndependentReviewer)
-      setClassification(gov.settings.defaultDataClassification)
+      applyGovState(gov)
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Không tải được cấu hình quản trị tổ chức.')
     } finally {
       setLoading(false)
     }
-  }, [slug, isOwner])
+  }, [slug, isOwner, applyGovState])
 
   useEffect(() => {
     if (!isOwner) return
@@ -95,10 +108,7 @@ export function WorkspaceGovernanceView({ slug }: { slug: string }) {
     getOrganizationGovernance(slug)
       .then((gov) => {
         if (active) {
-          setData(gov)
-          setOrgName(gov.name)
-          setRequireReviewer(gov.settings.requireIndependentReviewer)
-          setClassification(gov.settings.defaultDataClassification)
+          applyGovState(gov)
           setError(null)
         }
       })
@@ -115,7 +125,7 @@ export function WorkspaceGovernanceView({ slug }: { slug: string }) {
     return () => {
       active = false
     }
-  }, [slug, isOwner])
+  }, [slug, isOwner, applyGovState])
 
   if (!isOwner) {
     return (
@@ -162,17 +172,22 @@ export function WorkspaceGovernanceView({ slug }: { slug: string }) {
     setError(null)
     setPolicyNotice(null)
     try {
+      const effectiveAiPolicy = classification === 'INTERNAL' ? externalAiPolicy : 'OFF'
       const updated = await updateOrganizationGovernance(slug, {
         name: orgName.trim(),
         requireIndependentReviewer: requireReviewer,
         defaultDataClassification: classification,
+        externalAiPolicy: effectiveAiPolicy,
+        maxLotsPerTender: Number(maxLotsPerTender),
+        maxItemsPerTender: Number(maxItemsPerTender),
+        maxSpecsPerVersion: Number(maxSpecsPerVersion),
       })
-      setData(updated)
+      applyGovState(updated)
       const cached = readCachedOrganization(slug)
       if (cached) {
         cacheOrganization({ ...cached, name: updated.name })
       }
-      setPolicyNotice('Đã lưu cấu hình định danh & chính sách quản trị tổ chức.')
+      setPolicyNotice('Đã lưu cấu hình định danh, chính sách bảo mật & hạn mức vận hành của tổ chức.')
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Không cập nhật được cấu hình tổ chức.')
     } finally {
@@ -217,8 +232,8 @@ export function WorkspaceGovernanceView({ slug }: { slug: string }) {
           <h2>Quản trị cấu trúc tổ chức, chính sách tuân thủ & phân quyền ADMIN</h2>
           <p>
             Không gian này chỉ hiển thị với <strong>Chủ sở hữu (OWNER)</strong>. Tại đây bạn thiết lập quy chuẩn
-            pháp nhân/tuân thủ của tổ chức, bổ nhiệm hoặc hạ quyền Quản trị viên (ADMIN) và tra cứu bảng kiểm toán
-            toàn tổ chức.
+            pháp nhân/tuân thủ của tổ chức, điều chỉnh hạn mức vận hành, bổ nhiệm hoặc hạ quyền Quản trị viên (ADMIN)
+            và tra cứu bảng kiểm toán toàn tổ chức.
           </p>
         </div>
         <div className="activity-role-banner-actions">
@@ -300,10 +315,21 @@ export function WorkspaceGovernanceView({ slug }: { slug: string }) {
           <div className="tender-entry-heading">
             <div>
               <strong>Cấu hình Pháp nhân & Chính sách Tuân thủ của Tổ chức</strong>
-              <p className="muted">
-                Mã định danh hệ thống (slug): <code>{data.slug}</code> · Trạng thái tổ chức:{' '}
-                <strong>{data.status}</strong>
-              </p>
+              <div className="governance-org-meta-row">
+                <span className="muted">
+                  Mã định danh hệ thống (slug): <code className="governance-slug-code">{data.slug}</code>
+                </span>
+                <span
+                  className={
+                    data.status === 'ACTIVE'
+                      ? 'governance-org-status-badge is-active'
+                      : 'governance-org-status-badge'
+                  }
+                >
+                  <i aria-hidden="true" />
+                  {data.status === 'ACTIVE' ? 'ĐANG HOẠT ĐỘNG (ACTIVE)' : data.status}
+                </span>
+              </div>
             </div>
           </div>
 
@@ -319,8 +345,8 @@ export function WorkspaceGovernanceView({ slug }: { slug: string }) {
               <span>2. Phân loại bảo mật dữ liệu dùng để làm gì?</span>
               <p>
                 Quy định nhãn bảo mật mặc định khi nhân sự tải E-HSMT, báo giá hoặc CFS lên workspace. Ở mức{' '}
-                <strong>CONFIDENTIAL</strong> hoặc <strong>RESTRICTED</strong>, hệ thống khóa cứng không cho gửi dữ
-                liệu ra mô hình AI bên ngoài.
+                <strong>CONFIDENTIAL</strong> hoặc <strong>RESTRICTED</strong>, hệ thống tự động khóa cứng không cho gửi
+                dữ liệu ra mô hình AI bên ngoài.
               </p>
             </article>
             <article className="governance-explainer-card">
@@ -349,11 +375,13 @@ export function WorkspaceGovernanceView({ slug }: { slug: string }) {
                 Mức phân loại bảo mật dữ liệu mặc định cho hồ sơ & tài liệu mới
                 <select
                   value={classification}
-                  onChange={(event) =>
-                    setClassification(
-                      event.target.value as 'INTERNAL' | 'CONFIDENTIAL' | 'RESTRICTED',
-                    )
-                  }
+                  onChange={(event) => {
+                    const nextClass = event.target.value as 'INTERNAL' | 'CONFIDENTIAL' | 'RESTRICTED'
+                    setClassification(nextClass)
+                    if (nextClass !== 'INTERNAL') {
+                      setExternalAiPolicy('OFF')
+                    }
+                  }}
                 >
                   {Object.entries(classificationLabels).map(([value, label]) => (
                     <option key={value} value={value}>
@@ -363,42 +391,115 @@ export function WorkspaceGovernanceView({ slug }: { slug: string }) {
                 </select>
               </label>
 
-              <label className="governance-checkbox-field span-2">
-                <input
-                  type="checkbox"
-                  checked={requireReviewer}
-                  onChange={(event) => setRequireReviewer(event.target.checked)}
-                />
-                <div>
-                  <strong>Bắt buộc thẩm định độc lập bởi REVIEWER trước khi phê duyệt hồ sơ (Khuyên dùng)</strong>
+              <div className="governance-switch-card span-2">
+                <div className="governance-switch-copy">
+                  <strong>Bắt buộc thẩm định độc lập bởi REVIEWER trước khi phê duyệt hồ sơ</strong>
                   <p className="muted">
-                    Đảm bảo tính khách quan: chỉ REVIEWER không tham gia chỉnh sửa bản phân tích mới được quyền bấm
-                    Approve xuất báo cáo chính thức.
+                    Nguyên tắc 4 mắt (Four-Eyes Principle): chỉ REVIEWER độc lập (không phải người tạo/sửa bản phân
+                    tích) mới được quyền bấm Approve xuất báo cáo chính thức.
                   </p>
                 </div>
-              </label>
-            </div>
-
-            <div className="governance-guardrails">
-              <div className="governance-guardrail-item">
-                <span>Chính sách AI bên ngoài</span>
-                <strong>{data.settings.externalAiPolicy} (Khóa cứng bảo mật)</strong>
-              </div>
-              <div className="governance-guardrail-item">
-                <span>Hạn mức mỗi Hồ sơ thầu</span>
-                <strong>
-                  {data.settings.maxLotsPerTender} Lot / {data.settings.maxItemsPerTender} Item
-                </strong>
-              </div>
-              <div className="governance-guardrail-item">
-                <span>Hạn mức mỗi Phiên bản Catalog</span>
-                <strong>{data.settings.maxSpecsPerVersion} thông số kỹ thuật</strong>
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={requireReviewer}
+                  aria-label="Bắt buộc thẩm định độc lập bởi REVIEWER"
+                  className={requireReviewer ? 'governance-toggle is-on' : 'governance-toggle is-off'}
+                  onClick={() => setRequireReviewer((prev) => !prev)}
+                >
+                  <span className="governance-toggle-track">
+                    <span className="governance-toggle-thumb" />
+                  </span>
+                  <span className="governance-toggle-text">{requireReviewer ? 'ON' : 'OFF'}</span>
+                </button>
               </div>
             </div>
 
-            <div className="tender-inline-actions" style={{ marginTop: '.85rem' }}>
+            <div className="governance-configurable-guardrails">
+              <div className="governance-guardrail-head">
+                <strong>Cấu hình Chính sách AI & Hạn mức Vận hành (OWNER có thể điều chỉnh)</strong>
+                <span className="muted">
+                  Kiểm soát phạm vi xử lý AI và giới hạn số lượng bản ghi tối đa trên mỗi Hồ sơ thầu / Phiên bản Catalog.
+                </span>
+              </div>
+
+              <div className="governance-guardrail-inputs">
+                <label className="governance-guardrail-box">
+                  <span>CHÍNH SÁCH AI BÊN NGOÀI</span>
+                  <select
+                    aria-label="Chính sách AI bên ngoài"
+                    value={classification === 'INTERNAL' ? externalAiPolicy : 'OFF'}
+                    disabled={classification !== 'INTERNAL'}
+                    onChange={(event) =>
+                      setExternalAiPolicy(event.target.value as 'OFF' | 'INTERNAL_ONLY')
+                    }
+                  >
+                    <option value="OFF">OFF — Khóa cứng 100% nội bộ</option>
+                    <option value="INTERNAL_ONLY">
+                      INTERNAL_ONLY — Chỉ mở với dữ liệu Nội bộ
+                    </option>
+                  </select>
+                  <small className="muted">
+                    {classification !== 'INTERNAL'
+                      ? 'Đang tự động khóa ở mức OFF vì phân loại mặc định là CONFIDENTIAL/RESTRICTED.'
+                      : 'Tài liệu CONFIDENTIAL và RESTRICTED vẫn luôn bị chặn gửi ra ngoài.'}
+                  </small>
+                </label>
+
+                <div className="governance-guardrail-box">
+                  <span>HẠN MỨC MỖI HỒ SƠ THẦU (LOT / ITEM)</span>
+                  <div className="governance-dual-number">
+                    <label>
+                      <small>Số Lot tối đa (1–50)</small>
+                      <input
+                        type="number"
+                        min={1}
+                        max={50}
+                        required
+                        aria-label="Hạn mức Lot mỗi hồ sơ thầu"
+                        value={maxLotsPerTender}
+                        onChange={(event) => setMaxLotsPerTender(Number(event.target.value))}
+                      />
+                    </label>
+                    <label>
+                      <small>Số Item tối đa (1–500)</small>
+                      <input
+                        type="number"
+                        min={1}
+                        max={500}
+                        required
+                        aria-label="Hạn mức Item mỗi hồ sơ thầu"
+                        value={maxItemsPerTender}
+                        onChange={(event) => setMaxItemsPerTender(Number(event.target.value))}
+                      />
+                    </label>
+                  </div>
+                  <small className="muted">
+                    Hiện tại: <strong>{maxLotsPerTender} Lot / {maxItemsPerTender} Item</strong> mỗi hồ sơ thầu.
+                  </small>
+                </div>
+
+                <label className="governance-guardrail-box">
+                  <span>HẠN MỨC MỖI PHIÊN BẢN CATALOG</span>
+                  <input
+                    type="number"
+                    min={10}
+                    max={500}
+                    required
+                    aria-label="Hạn mức thông số mỗi phiên bản Catalog"
+                    value={maxSpecsPerVersion}
+                    onChange={(event) => setMaxSpecsPerVersion(Number(event.target.value))}
+                  />
+                  <small className="muted">
+                    Tối đa <strong>{maxSpecsPerVersion} thông số kỹ thuật</strong> trên một phiên bản sản phẩm (10–500).
+                  </small>
+                </label>
+              </div>
+            </div>
+
+            <div className="tender-inline-actions" style={{ marginTop: '.95rem' }}>
               <button className="button button-primary" disabled={savingPolicy} type="submit">
-                {savingPolicy ? 'Đang lưu chính sách…' : 'Lưu chính sách tổ chức'}
+                {savingPolicy ? 'Đang lưu chính sách…' : 'Lưu chính sách & Hạn mức tổ chức'}
               </button>
             </div>
           </form>

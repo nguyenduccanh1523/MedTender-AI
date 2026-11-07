@@ -18,12 +18,28 @@ const content: Record<Organization['role'], RoleLandingContent> = {
 
 export function RoleLanding({ organization }: { organization: Organization }) {
   const data = content[organization.role]
-  const canManageTeam = organization.role === 'OWNER' || organization.role === 'ADMIN'
+  const isOwner = organization.role === 'OWNER'
+  const isAdmin = organization.role === 'ADMIN'
+  const isCatalogManager = organization.role === 'CATALOG_MANAGER'
+  const secondaryHref = isOwner
+    ? `/${organization.slug}/quan-tri-to-chuc`
+    : isAdmin
+      ? `/${organization.slug}/thanh-vien`
+      : isCatalogManager
+        ? `/${organization.slug}/catalog`
+        : `/${organization.slug}/hoat-dong`
+  const secondaryCopy = isOwner
+    ? 'Cấu hình chính sách tuân thủ, hạn mức hệ thống và kiểm toán cấp tổ chức.'
+    : isAdmin
+      ? 'Xem thành viên và lời mời của tổ chức.'
+      : isCatalogManager
+        ? 'Quản lý SKU, thông số nguồn và xuất bản phiên bản thiết bị.'
+        : 'Theo dõi phần hoạt động hiện có trong workspace.'
   return <section className="role-landing" aria-label="Trang bắt đầu workspace">
     <div className="role-landing-intro"><div><p className="eyebrow">{roleLabels[organization.role]} · MedTender workspace</p><h2>{data.headline}</h2><p>{data.focus}</p></div><div className="role-access-badge"><span>Quyền hiện tại</span><strong>{roleLabels[organization.role]}</strong></div></div>
     <div className="role-action-grid">
-      <article className="role-action-primary"><span>Điểm bắt đầu</span><h3>{canCreateTender(organization.role) ? 'Quản lý hồ sơ thầu' : 'Xem hồ sơ thầu'}</h3><p>{canCreateTender(organization.role) ? 'Tạo hồ sơ mới hoặc tiếp tục xem các RFQ, E-HSMT đã có.' : 'Đọc danh sách và chi tiết hồ sơ thuộc tổ chức.'}</p><Link href={`/${organization.slug}/tenders`}>Mở hồ sơ thầu <span aria-hidden="true">→</span></Link></article>
-      <article><span>Tiếp tục khám phá</span><h3>{data.secondary}</h3><p>{canManageTeam ? 'Xem thành viên và lời mời của tổ chức.' : 'Theo dõi phần hoạt động hiện có trong workspace.'}</p><Link href={`/${organization.slug}/${canManageTeam ? 'thanh-vien' : 'hoat-dong'}`}>Đi tới <span aria-hidden="true">→</span></Link></article>
+      <article className="role-action-primary"><span>Điểm bắt đầu</span><h3>{isCatalogManager ? 'Quản lý Catalog thiết bị' : canCreateTender(organization.role) ? 'Quản lý hồ sơ thầu' : 'Xem hồ sơ thầu'}</h3><p>{isCatalogManager ? 'Tạo SKU thiết bị mới, cập nhật bản nháp thông số hoặc xuất bản phiên bản chuẩn.' : canCreateTender(organization.role) ? 'Tạo hồ sơ mới hoặc tiếp tục xem các RFQ, E-HSMT đã có.' : 'Đọc danh sách và chi tiết hồ sơ thuộc tổ chức.'}</p><Link href={`/${organization.slug}/${isCatalogManager ? 'catalog' : 'tenders'}`}>{isCatalogManager ? 'Mở Catalog thiết bị' : 'Mở hồ sơ thầu'} <span aria-hidden="true">→</span></Link></article>
+      <article><span>Tiếp tục khám phá</span><h3>{data.secondary}</h3><p>{secondaryCopy}</p><Link href={secondaryHref}>Đi tới <span aria-hidden="true">→</span></Link></article>
       <article><span>Phạm vi quyền</span><h3>{roleLabels[organization.role]}</h3><p>{data.permission}</p></article>
     </div>
   </section>

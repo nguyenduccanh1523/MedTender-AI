@@ -375,27 +375,37 @@ export function CatalogList({ slug }: { slug: string }) {
           <i />
           <i />
         </div>
-      ) : products.length === 0 ? (
+      ) : (canWrite ? products : products.filter((p) => Boolean(p.publishedVersion) || (p.latestVersion && p.latestVersion.status !== 'DRAFT'))).length === 0 ? (
         <div className="tender-empty-lot catalog-empty-box">
           <strong>
             {hasFilters
               ? 'Không tìm thấy sản phẩm phù hợp bộ lọc'
-              : 'Chưa có sản phẩm nào trong Catalog của tổ chức'}
+              : canWrite
+                ? 'Chưa có sản phẩm nào trong Catalog của tổ chức'
+                : 'Chưa có sản phẩm nào được xuất bản trong Catalog'}
           </strong>
           <p className="muted">
             {hasFilters
               ? 'Thử đổi từ khóa tìm kiếm hoặc chuyển bộ lọc trạng thái sản phẩm.'
               : canWrite
                 ? 'Nhấn "+ Thêm sản phẩm" ở góc trên bên phải để khởi tạo thiết bị và quản lý phiên bản thông số kỹ thuật.'
-                : 'Vai trò của bạn là chỉ xem Catalog. Liên hệ OWNER, ADMIN hoặc CATALOG_MANAGER để khởi tạo sản phẩm trong danh mục.'}
+                : 'Vai trò của bạn chỉ xem các sản phẩm đã xuất bản chính thức (PUBLISHED). Các bản nháp (DRAFT) chỉ hiển thị cho OWNER, ADMIN và CATALOG_MANAGER trong lúc biên tập.'}
           </p>
         </div>
       ) : (
         <>
           <ul className="organization-list tender-cards-list">
-            {products.map((product) => {
+            {(canWrite
+              ? products
+              : products.filter(
+                  (p) =>
+                    Boolean(p.publishedVersion) ||
+                    (p.latestVersion && p.latestVersion.status !== 'DRAFT'),
+                )
+            ).map((product) => {
               const activeVer = product.publishedVersion ?? product.latestVersion
               const conflictCount = activeVer?.conflictCount ?? 0
+              const isDraftOnly = !product.publishedVersion && product.latestVersion?.status === 'DRAFT'
               return (
                 <li key={product.id}>
                   <Link href={`/${slug}/catalog/${product.id}`} className="tender-list-card catalog-list-card">
@@ -415,6 +425,11 @@ export function CatalogList({ slug }: { slug: string }) {
                         >
                           {product.status === 'ACTIVE' ? 'Đang hoạt động' : 'Đã lưu trữ'}
                         </span>
+                        {isDraftOnly && (
+                          <span className="catalog-status-pill is-draft">
+                            Bản nháp nội bộ (Chưa xuất bản)
+                          </span>
+                        )}
                         {conflictCount > 0 && (
                           <span className="catalog-conflict-badge">
                             ⚠ {conflictCount} thông số xung đột nguồn
@@ -426,7 +441,7 @@ export function CatalogList({ slug }: { slug: string }) {
                         {product.publishedVersion
                           ? `Phiên bản chuẩn: ${product.publishedVersion.versionLabel} · Model: ${product.publishedVersion.modelCode}`
                           : product.latestVersion
-                            ? `Đang soạn thảo: ${product.latestVersion.versionLabel} (${versionStatusLabels[product.latestVersion.status]}) · Model: ${product.latestVersion.modelCode}`
+                            ? `Đang soạn thảo nội bộ: ${product.latestVersion.versionLabel} (${versionStatusLabels[product.latestVersion.status]}) · Model: ${product.latestVersion.modelCode}`
                             : 'Chưa có phiên bản'}
                       </small>
                     </div>

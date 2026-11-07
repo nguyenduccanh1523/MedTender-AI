@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { useEffect, useState, type FormEvent } from 'react'
 
+import { ConfirmDialog } from '../../../components/ui/confirm-dialog'
 import { loadResource, readResource, writeResource } from '../../../lib/api/resource-cache'
 import { roleLabels } from '../../organizations/roles'
 import {
@@ -151,6 +152,12 @@ export function TenderDetailView({
   const [editingItemId, setEditingItemId] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
   const [deleted, setDeleted] = useState(false)
+  const [confirmTarget, setConfirmTarget] = useState<
+    | { kind: 'tender' }
+    | { kind: 'lot'; lot: TenderLot }
+    | { kind: 'item'; lotId: string; item: TenderItem }
+    | null
+  >(null)
 
   const [audits, setAudits] = useState<TenderAuditLog[] | undefined>(undefined)
   const [auditsLoading, setAuditsLoading] = useState(false)
@@ -320,14 +327,8 @@ export function TenderDetailView({
     }
   }
 
-  async function removeCurrentTender() {
+  async function executeRemoveCurrentTender() {
     if (!canWrite || !tender || busy || typeof deleteTender !== 'function') return
-    if (
-      typeof window !== 'undefined' &&
-      !window.confirm(`Xóa hồ sơ "${tender.title}" và toàn bộ lot/hàng hóa bên trong?`)
-    ) {
-      return
-    }
     setBusy(true)
     setTenderError('')
     try {
@@ -335,6 +336,7 @@ export function TenderDetailView({
       const listKey = `tenders:${slug}`
       const list = readResource<Tender[]>(listKey)
       if (list) writeResource(listKey, list.filter((entry) => entry.id !== id))
+      setConfirmTarget(null)
       setDeleted(true)
       setBusy(false)
       if (onDeleted) onDeleted()
@@ -342,6 +344,11 @@ export function TenderDetailView({
       setTenderError(message(cause))
       setBusy(false)
     }
+  }
+
+  function removeCurrentTender() {
+    if (!canWrite || !tender || busy || typeof deleteTender !== 'function') return
+    setConfirmTarget({ kind: 'tender' })
   }
 
   async function addLot(event: FormEvent<HTMLFormElement>) {
@@ -405,14 +412,8 @@ export function TenderDetailView({
     }
   }
 
-  async function removeLot(lot: TenderLot) {
+  async function executeRemoveLot(lot: TenderLot) {
     if (!canWrite || !tender || busy || typeof deleteTenderLot !== 'function') return
-    if (
-      typeof window !== 'undefined' &&
-      !window.confirm(`Xóa lot ${lot.code} (${lot.name}) và ${lot.items.length} dòng hàng hóa?`)
-    ) {
-      return
-    }
     setBusy(true)
     setLotError('')
     try {
@@ -424,12 +425,18 @@ export function TenderDetailView({
       setTender(next)
       writeResource(key, next)
       syncListCache(next)
+      setConfirmTarget(null)
       void refreshAuditsIfOpen()
     } catch (cause) {
       setLotError(message(cause))
     } finally {
       setBusy(false)
     }
+  }
+
+  function removeLot(lot: TenderLot) {
+    if (!canWrite || !tender || busy || typeof deleteTenderLot !== 'function') return
+    setConfirmTarget({ kind: 'lot', lot })
   }
 
   async function addItem(event: FormEvent<HTMLFormElement>, lotId: string) {
@@ -510,14 +517,8 @@ export function TenderDetailView({
     }
   }
 
-  async function removeItem(lotId: string, item: TenderItem) {
+  async function executeRemoveItem(lotId: string, item: TenderItem) {
     if (!canWrite || !tender || busy || typeof deleteTenderItem !== 'function') return
-    if (
-      typeof window !== 'undefined' &&
-      !window.confirm(`Xóa dòng hàng hóa #${item.itemNo} — ${item.name}?`)
-    ) {
-      return
-    }
     setBusy(true)
     setItemError('')
     try {
@@ -533,12 +534,18 @@ export function TenderDetailView({
       setTender(next)
       writeResource(key, next)
       syncListCache(next)
+      setConfirmTarget(null)
       void refreshAuditsIfOpen()
     } catch (cause) {
       setItemError(message(cause))
     } finally {
       setBusy(false)
     }
+  }
+
+  function removeItem(lotId: string, item: TenderItem) {
+    if (!canWrite || !tender || busy || typeof deleteTenderItem !== 'function') return
+    setConfirmTarget({ kind: 'item', lotId, item })
   }
 
   if (deleted) {
@@ -1158,6 +1165,49 @@ export function TenderDetailView({
           </div>
         </section>
       )}
+
+      <ConfirmDialog
+        open={Boolean(confirmTarget)}
+        badge={
+          confirmTarget?.kind === 'tender'
+            ? tender.reference || 'HỒ SƠ THẦU'
+            : confirmTarget?.kind === 'lot'
+              ? confirmTarget.lot.code
+              : confirmTarget?.kind === 'item'
+                ? `STT #${confirmTarget.item.itemNo}`
+                : undefined
+        }
+        title={
+          confirmTarget?.kind === 'tender'
+            ? `Xóa hồ sơ thầu "${tender.title}"?`
+            : confirmTarget?.kind === 'lot'
+              ? `Xóa lot ${confirmTarget.lot.code} (${confirmTarget.lot.name})?`
+              : confirmTarget?.kind === 'item'
+                ? `Xóa dòng hàng hóa "${confirmTarget.item.name}"?`
+                : 'Xác nhận xóa'
+        }
+        description={
+          confirmTarget?.kind === 'tender'
+            ? 'Toàn bộ cấu trúc Lot, các dòng hàng hóa và lịch sử bên trong hồ sơ thầu này sẽ bị xóa vĩnh viễn.'
+            : confirmTarget?.kind === 'lot'
+              ? `Lot ${confirmTarget.lot.code} cùng ${confirmTarget.lot.items.length} dòng hàng hóa bên trong sẽ bị xóa khỏi hồ sơ thầu.`
+              : confirmTarget?.kind === 'item'
+                ? `Dòng hàng hóa #${confirmTarget.item.itemNo} (${formatQuantity(confirmTarget.item.quantity)} ${confirmTarget.item.unit}) sẽ bị xóa khỏi lot.`
+                : ''
+        }
+        busy={busy}
+        onCancel={() => setConfirmTarget(null)}
+        onConfirm={() => {
+          if (!confirmTarget) return
+          if (confirmTarget.kind === 'tender') {
+            void executeRemoveCurrentTender()
+          } else if (confirmTarget.kind === 'lot') {
+            void executeRemoveLot(confirmTarget.lot)
+          } else {
+            void executeRemoveItem(confirmTarget.lotId, confirmTarget.item)
+          }
+        }}
+      />
     </div>
   )
 }

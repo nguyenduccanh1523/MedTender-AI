@@ -698,7 +698,8 @@ export interface components {
         };
         OrganizationGovernanceSettingsDto: {
             requireIndependentReviewer: boolean;
-            externalAiPolicy: string;
+            /** @enum {string} */
+            externalAiPolicy: "OFF" | "INTERNAL_ONLY";
             /** @enum {string} */
             defaultDataClassification: "INTERNAL" | "CONFIDENTIAL" | "RESTRICTED";
             maxLotsPerTender: number;
@@ -721,6 +722,11 @@ export interface components {
             requireIndependentReviewer?: boolean;
             /** @enum {string} */
             defaultDataClassification?: "INTERNAL" | "CONFIDENTIAL" | "RESTRICTED";
+            /** @enum {string} */
+            externalAiPolicy?: "OFF" | "INTERNAL_ONLY";
+            maxLotsPerTender?: number;
+            maxItemsPerTender?: number;
+            maxSpecsPerVersion?: number;
         };
         UpdateOrganizationMemberDto: {
             /** @enum {string} */
