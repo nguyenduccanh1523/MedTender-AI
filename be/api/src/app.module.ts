@@ -6,9 +6,21 @@ import { OrganizationsModule } from './modules/organizations/organizations.modul
 import { ProvisioningModule } from './modules/provisioning/provisioning.module'
 import { TendersModule } from './modules/tenders/tenders.module'
 import { CatalogModule } from './modules/catalog/catalog.module'
+import { DocumentsModule } from './modules/documents/documents.module'
+import { ObjectStorageModule } from './integrations/object-storage/object-storage.module'
+import { AiPoliciesModule } from './modules/ai-policies/ai-policies.module'
 
 @Module({
-  imports: [IdentityModule, OrganizationsModule, ProvisioningModule, TendersModule, CatalogModule],
+  imports: [
+    ObjectStorageModule,
+    AiPoliciesModule,
+    IdentityModule,
+    OrganizationsModule,
+    ProvisioningModule,
+    TendersModule,
+    CatalogModule,
+    DocumentsModule,
+  ],
   controllers: [HealthController],
 })
 export class AppModule {}

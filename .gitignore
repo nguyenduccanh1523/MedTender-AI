@@ -19,3 +19,4 @@ be/api/src/database/generated/
 ~$*.docx
 .node-version
 docs/
+test_files/

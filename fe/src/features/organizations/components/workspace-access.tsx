@@ -20,6 +20,7 @@ type WorkspaceSection =
   | 'activity'
   | 'tenders'
   | 'catalog'
+  | 'documents'
   | 'team'
   | 'governance'
   | 'profile'
@@ -29,6 +30,7 @@ const sectionHeaders: Record<WorkspaceSection, { eyebrow: string; title: string 
   activity: { eyebrow: 'Điều phối theo vai trò', title: 'Hoạt động & Hàng đợi công việc' },
   tenders: { eyebrow: 'Danh mục mua sắm', title: 'Hồ sơ thầu' },
   catalog: { eyebrow: 'Chuẩn hóa kỹ thuật', title: 'Catalog thiết bị & Phiên bản' },
+  documents: { eyebrow: 'Kho lưu trữ an toàn', title: 'Tài liệu & Bằng chứng nguồn' },
   team: { eyebrow: 'Quản trị đội ngũ', title: 'Thành viên & Lời mời' },
   governance: { eyebrow: 'Đặc quyền Chủ sở hữu (OWNER)', title: 'Quản trị tổ chức & Chính sách' },
   profile: { eyebrow: 'Tài khoản & Bảo mật', title: 'Hồ sơ cá nhân' },
@@ -92,21 +94,24 @@ export function WorkspaceAccess({
       ? 'tenders'
       : pathname.includes('/catalog')
         ? 'catalog'
-        : pathname.endsWith('/quan-tri-to-chuc')
-          ? 'governance'
-          : pathname.endsWith('/thanh-vien')
-            ? 'team'
-            : pathname.endsWith('/hoat-dong')
-              ? 'activity'
-              : pathname.endsWith('/ho-so-ca-nhan')
-                ? 'profile'
-                : 'overview')
+        : pathname.includes('/tai-lieu')
+          ? 'documents'
+          : pathname.endsWith('/quan-tri-to-chuc')
+            ? 'governance'
+            : pathname.endsWith('/thanh-vien')
+              ? 'team'
+              : pathname.endsWith('/hoat-dong')
+                ? 'activity'
+                : pathname.endsWith('/ho-so-ca-nhan')
+                  ? 'profile'
+                  : 'overview')
 
   const navigation = [
     { href: `/${organization.slug}`, label: 'Tổng quan', icon: '◈', section: 'overview' as const },
     { href: `/${organization.slug}/hoat-dong`, label: 'Hoạt động', icon: '→', section: 'activity' as const },
     { href: `/${organization.slug}/tenders`, label: 'Hồ sơ thầu', icon: '□', section: 'tenders' as const },
     { href: `/${organization.slug}/catalog`, label: 'Catalog thiết bị', icon: '⊞', section: 'catalog' as const },
+    { href: `/${organization.slug}/tai-lieu`, label: 'Tài liệu & Bằng chứng', icon: '▤', section: 'documents' as const },
     ...(canManageTeam
       ? [{ href: `/${organization.slug}/thanh-vien`, label: 'Quản trị đội ngũ', icon: '◎', section: 'team' as const }]
       : []),

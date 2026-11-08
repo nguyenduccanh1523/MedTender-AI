@@ -105,6 +105,10 @@
   animation: tender-spin .8s linear infinite;
 }
 
+.spin-element {
+  animation: tender-spin .8s linear infinite;
+}
+
 @keyframes tender-spin {
   to {
     transform: rotate(360deg);

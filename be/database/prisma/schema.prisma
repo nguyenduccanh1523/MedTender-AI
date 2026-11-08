@@ -72,6 +72,40 @@ enum ProductVersionStatus {
   @@map("product_version_status")
 }
 
+enum DocumentType {
+  TENDER_DOC
+  CATALOG_EVIDENCE
+  CERTIFICATE
+  OTHER
+
+  @@map("document_type")
+}
+
+enum FileScanStatus {
+  PENDING
+  SCANNING
+  CLEAN
+  QUARANTINED
+
+  @@map("file_scan_status")
+}
+
+enum DocumentVersionStatus {
+  DRAFT
+  READY
+  ARCHIVED
+
+  @@map("document_version_status")
+}
+
+enum DataClassification {
+  INTERNAL
+  CONFIDENTIAL
+  RESTRICTED
+
+  @@map("data_classification")
+}
+
 model User {
   id           String                   @id @default(uuid()) @db.Uuid
   email        String                   @unique @db.Citext
@@ -90,6 +124,13 @@ model User {
   productsCreated Product[] @relation("ProductCreator")
   productVersionsCreated ProductVersion[] @relation("ProductVersionCreator")
   productVersionsPublished ProductVersion[] @relation("ProductVersionPublisher")
+  fileAssetsCreated FileAsset[] @relation("FileAssetCreator")
+  documentsCreated Document[] @relation("DocumentCreator")
+  documentVersionsCreated DocumentVersion[] @relation("DocumentVersionCreator")
+  userPolicyConsents UserPolicyConsent[]
+  securityIncidentsUploaded SecurityIncident[] @relation("IncidentUploader")
+  securityIncidentsResolved SecurityIncident[] @relation("IncidentResolver")
+  securityIncidentsPurged SecurityIncident[] @relation("IncidentPurger")
 
   @@map("users")
 }
@@ -109,6 +150,10 @@ model Organization {
   tenders Tender[]
   tenderAudits TenderAuditLog[]
   products Product[]
+  fileAssets FileAsset[]
+  documents Document[]
+  userPolicyConsents UserPolicyConsent[]
+  securityIncidents SecurityIncident[]
 
   @@map("organizations")
 }
@@ -124,6 +169,7 @@ model Tender {
   updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
   lots TenderLot[]
+  documents Document[]
 
   @@unique([id, organizationId])
   @@index([organizationId, createdAt, id])
@@ -197,6 +243,7 @@ model Product {
   organization    Organization     @relation(fields: [organizationId], references: [id], onDelete: Restrict)
   createdBy       User             @relation("ProductCreator", fields: [createdByUserId], references: [id], onDelete: Restrict)
   versions        ProductVersion[]
+  documents       Document[]
 
   @@unique([id, organizationId])
   @@index([organizationId, status, createdAt, id])
@@ -242,9 +289,138 @@ model ProductSpecification {
   documentVersionId String?        @map("document_version_id") @db.Uuid
   createdAt         DateTime       @default(now()) @map("created_at") @db.Timestamptz(6)
   productVersion    ProductVersion @relation(fields: [productVersionId, organizationId], references: [id, organizationId], onDelete: Cascade)
+  documentVersion   DocumentVersion? @relation(fields: [documentVersionId, organizationId], references: [id, organizationId], onDelete: SetNull)
 
   @@index([organizationId, productVersionId])
   @@map("product_specifications")
+}
+
+model FileAsset {
+  id               String         @id @default(uuid()) @db.Uuid
+  organizationId   String         @map("organization_id") @db.Uuid
+  bucket           String
+  objectKey        String         @unique @map("object_key")
+  originalFilename String         @map("original_filename")
+  mimeType         String         @map("mime_type")
+  sizeBytes        BigInt         @map("size_bytes")
+  sha256           String
+  scanStatus       FileScanStatus @default(PENDING) @map("scan_status")
+  quarantineReason String?        @map("quarantine_reason")
+  uploadTokenHash  String         @unique @map("upload_token_hash")
+  expiresAt        DateTime       @map("expires_at") @db.Timestamptz(6)
+  consumedAt       DateTime?      @map("consumed_at") @db.Timestamptz(6)
+  createdByUserId  String         @map("created_by_user_id") @db.Uuid
+  createdAt        DateTime       @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt        DateTime       @updatedAt @map("updated_at") @db.Timestamptz(6)
+  organization     Organization   @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  createdBy        User           @relation("FileAssetCreator", fields: [createdByUserId], references: [id], onDelete: Restrict)
+  versions         DocumentVersion[]
+  incidents        SecurityIncident[]
+
+  @@unique([id, organizationId])
+  @@index([organizationId, scanStatus, createdAt])
+  @@index([organizationId, sha256])
+  @@map("file_assets")
+}
+
+model Document {
+  id              String             @id @default(uuid()) @db.Uuid
+  organizationId  String             @map("organization_id") @db.Uuid
+  title           String
+  documentType    DocumentType       @default(TENDER_DOC) @map("document_type")
+  classification  DataClassification @default(INTERNAL)
+  description     String?
+  tenderId        String?            @map("tender_id") @db.Uuid
+  productId       String?            @map("product_id") @db.Uuid
+  createdByUserId String             @map("created_by_user_id") @db.Uuid
+  createdAt       DateTime           @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime           @updatedAt @map("updated_at") @db.Timestamptz(6)
+  organization    Organization       @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  tender          Tender?            @relation(fields: [tenderId, organizationId], references: [id, organizationId], onDelete: SetNull)
+  product         Product?           @relation(fields: [productId, organizationId], references: [id, organizationId], onDelete: SetNull)
+  createdBy       User               @relation("DocumentCreator", fields: [createdByUserId], references: [id], onDelete: Restrict)
+  versions        DocumentVersion[]
+
+  @@unique([id, organizationId])
+  @@index([organizationId, tenderId])
+  @@index([organizationId, productId])
+  @@index([organizationId, createdAt, id])
+  @@map("documents")
+}
+
+model DocumentVersion {
+  id                      String                @id @default(uuid()) @db.Uuid
+  organizationId          String                @map("organization_id") @db.Uuid
+  documentId              String                @map("document_id") @db.Uuid
+  versionNumber           Int                   @map("version_number")
+  versionLabel            String                @map("version_label")
+  fileAssetId             String                @map("file_asset_id") @db.Uuid
+  status                  DocumentVersionStatus @default(DRAFT)
+  rightsConfirmed         Boolean               @default(false) @map("rights_confirmed")
+  rightsConfirmedAt       DateTime?             @map("rights_confirmed_at") @db.Timestamptz(6)
+  acceptedTermsVersion    String?               @map("accepted_terms_version")
+  acceptedPrivacyVersion  String?               @map("accepted_privacy_version")
+  acceptedAiNoticeVersion String?               @map("accepted_ai_notice_version")
+  notes                   String?
+  createdByUserId         String                @map("created_by_user_id") @db.Uuid
+  createdAt               DateTime              @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt               DateTime              @updatedAt @map("updated_at") @db.Timestamptz(6)
+  document                Document              @relation(fields: [documentId, organizationId], references: [id, organizationId], onDelete: Cascade)
+  fileAsset               FileAsset             @relation(fields: [fileAssetId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  createdBy               User                  @relation("DocumentVersionCreator", fields: [createdByUserId], references: [id], onDelete: Restrict)
+  specifications          ProductSpecification[]
+
+  @@unique([id, organizationId])
+  @@unique([documentId, versionNumber])
+  @@unique([documentId, versionLabel])
+  @@index([organizationId, documentId, versionNumber])
+  @@map("document_versions")
+}
+
+model UserPolicyConsent {
+  id               String       @id @default(uuid()) @db.Uuid
+  organizationId   String       @map("organization_id") @db.Uuid
+  userId           String       @map("user_id") @db.Uuid
+  policyVersion    String       @map("policy_version")
+  termsAccepted    Boolean      @default(true) @map("terms_accepted")
+  privacyAccepted  Boolean      @default(true) @map("privacy_accepted")
+  aiNoticeAccepted Boolean      @default(true) @map("ai_notice_accepted")
+  acceptedAt       DateTime     @default(now()) @map("accepted_at") @db.Timestamptz(6)
+  organization     Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user             User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, userId, policyVersion])
+  @@index([organizationId, userId])
+  @@map("user_policy_consents")
+}
+
+model SecurityIncident {
+  id                String       @id @default(uuid()) @db.Uuid
+  organizationId    String       @map("organization_id") @db.Uuid
+  reference         String       @unique
+  fileAssetId       String       @map("file_asset_id") @db.Uuid
+  fileName          String       @map("file_name")
+  sha256            String
+  reason            String
+  details           Json         @default("{}")
+  status            String       @default("OPEN")
+  ipAddress         String?      @map("ip_address")
+  uploadedByUserId  String       @map("uploaded_by_user_id") @db.Uuid
+  resolvedByUserId  String?      @map("resolved_by_user_id") @db.Uuid
+  resolvedAt        DateTime?    @map("resolved_at") @db.Timestamptz(6)
+  purgeReason       String?      @map("purge_reason")
+  purgedByUserId    String?      @map("purged_by_user_id") @db.Uuid
+  purgedAt          DateTime?    @map("purged_at") @db.Timestamptz(6)
+  createdAt         DateTime     @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt         DateTime     @updatedAt @map("updated_at") @db.Timestamptz(6)
+  organization      Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  fileAsset         FileAsset    @relation(fields: [fileAssetId, organizationId], references: [id, organizationId], onDelete: Cascade)
+  uploadedBy        User         @relation("IncidentUploader", fields: [uploadedByUserId], references: [id], onDelete: Restrict)
+  resolvedBy        User?        @relation("IncidentResolver", fields: [resolvedByUserId], references: [id], onDelete: SetNull)
+  purgedBy          User?        @relation("IncidentPurger", fields: [purgedByUserId], references: [id], onDelete: SetNull)
+
+  @@index([organizationId, status, createdAt])
+  @@map("security_incidents")
 }
 
 model OrganizationApplication {

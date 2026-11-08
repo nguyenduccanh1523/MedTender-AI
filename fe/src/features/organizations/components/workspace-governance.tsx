@@ -11,6 +11,11 @@ import {
   type Organization,
   type OrganizationGovernance,
 } from '../api'
+import {
+  listSecurityIncidents,
+  purgeSecurityIncident,
+  type SecurityIncidentSummary,
+} from '../../documents/api'
 import { cacheOrganization, readCachedOrganization } from '../organization-cache'
 import { roleLabels } from '../roles'
 import { canManageOrganizationGovernance, useWorkspaceRole } from '../workspace-permissions'
@@ -30,20 +35,22 @@ const classificationLabels: Record<'INTERNAL' | 'CONFIDENTIAL' | 'RESTRICTED', s
   RESTRICTED: 'Tuyệt mật / Hạn chế tối đa (RESTRICTED) — Chỉ nhân sự được chỉ định mới được xem',
 }
 
-type GovernanceTab = 'policy' | 'members' | 'audits'
-type AuditScopeFilter = 'ALL' | 'ORG' | 'CATALOG' | 'TENDER'
+type GovernanceTab = 'policy' | 'members' | 'incidents' | 'audits'
+type AuditScopeFilter = 'ALL' | 'ORG' | 'CATALOG' | 'TENDER' | 'DOC'
 
 const auditScopeLabels: Record<AuditScopeFilter, string> = {
   ALL: 'Tất cả bản ghi',
   ORG: 'Tổ chức & Phân quyền',
   CATALOG: 'Catalog & Phiên bản',
   TENDER: 'Hồ sơ thầu / Lot / Item',
+  DOC: 'Tài liệu & Bảo mật',
 }
 
 function matchAuditScope(action: string, scope: AuditScopeFilter) {
   if (scope === 'ALL') return true
   if (scope === 'ORG') return action.startsWith('ORG_')
   if (scope === 'CATALOG') return action.startsWith('CATALOG_')
+  if (scope === 'DOC') return action.startsWith('DOCUMENT_') || action.startsWith('POLICY_')
   return action.startsWith('TENDER_') || action.startsWith('LOT_') || action.startsWith('ITEM_')
 }
 
@@ -74,6 +81,11 @@ export function WorkspaceGovernanceView({ slug }: { slug: string }) {
   const [auditLimit, setAuditLimit] = useState(10)
   const [auditPage, setAuditPage] = useState(1)
 
+  const [incidents, setIncidents] = useState<SecurityIncidentSummary[]>([])
+  const [purgingId, setPurgingId] = useState<string | null>(null)
+  const [purgeReason, setPurgeReason] = useState('')
+  const [showPurgeModal, setShowPurgeModal] = useState<SecurityIncidentSummary | null>(null)
+
   const applyGovState = useCallback((gov: OrganizationGovernance) => {
     setData(gov)
     setOrgName(gov.name)
@@ -93,8 +105,12 @@ export function WorkspaceGovernanceView({ slug }: { slug: string }) {
     setLoading(true)
     setError(null)
     try {
-      const gov = await getOrganizationGovernance(slug)
+      const [gov, incs] = await Promise.all([
+        getOrganizationGovernance(slug),
+        listSecurityIncidents(slug).catch(() => []),
+      ])
       applyGovState(gov)
+      setIncidents(incs)
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Không tải được cấu hình quản trị tổ chức.')
     } finally {
@@ -105,10 +121,14 @@ export function WorkspaceGovernanceView({ slug }: { slug: string }) {
   useEffect(() => {
     if (!isOwner) return
     let active = true
-    getOrganizationGovernance(slug)
-      .then((gov) => {
+    Promise.all([
+      getOrganizationGovernance(slug),
+      listSecurityIncidents(slug).catch(() => []),
+    ])
+      .then(([gov, incs]) => {
         if (active) {
           applyGovState(gov)
+          setIncidents(incs)
           setError(null)
         }
       })
@@ -296,6 +316,16 @@ export function WorkspaceGovernanceView({ slug }: { slug: string }) {
           >
             Bổ nhiệm & Phân quyền ADMIN
             <span className="tender-subtab-badge">{data.members.length}</span>
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={activeTab === 'incidents'}
+            className={activeTab === 'incidents' ? 'tender-subtab is-active' : 'tender-subtab'}
+            onClick={() => setActiveTab('incidents')}
+          >
+            Sự cố bảo mật & Cách ly
+            <span className="tender-subtab-badge">{incidents.length}</span>
           </button>
           <button
             type="button"
@@ -602,6 +632,157 @@ export function WorkspaceGovernanceView({ slug }: { slug: string }) {
         </section>
       )}
 
+      {activeTab === 'incidents' && (
+        <section className="surface tender-list-panel" aria-label="Sổ cái sự cố bảo mật và cách ly">
+          <div className="tender-entry-heading">
+            <div>
+              <strong>Sổ cái Sự cố Bảo mật & Tệp bị Cách ly (Security Quarantine Ledger)</strong>
+              <p className="muted">
+                Độc quyền dành riêng cho OWNER. Lưu giữ bằng chứng kiểm toán (Audit Trail) khi phát hiện tệp giả mạo,
+                sai chữ ký Magic Bytes, hoặc mã độc. Tệp bị cách ly lập tức bị khóa mọi quyền đọc/tải/phân tích AI cho
+                đến khi OWNER giải quyết hoặc tiêu hủy vĩnh viễn (Purge).
+              </p>
+            </div>
+          </div>
+
+          <div className="governance-explainer-grid" style={{ marginBottom: '1.25rem' }}>
+            <article className="governance-explainer-card">
+              <span>1. Cơ chế cách ly tự động (Zero-Trust)</span>
+              <p>
+                Bất kỳ tệp nào tải lên bị phát hiện không đúng chữ ký số binary (%PDF, PK.. zip, hay dính PE/MZ
+                executable) sẽ lập tức chuyển vào kho cách ly biệt lập. Nhân sự thông thường không thể thấy hoặc tải tệp.
+              </p>
+            </article>
+            <article className="governance-explainer-card">
+              <span>2. Bằng chứng kiểm toán bất biến</span>
+              <p>
+                Mã băm SHA-256, thời điểm, người tải lên và lý do vi phạm được ghi vào Sổ cái bảo mật này để phục vụ
+                thanh tra tuân thủ pháp lý y tế và điều tra nội bộ.
+              </p>
+            </article>
+            <article className="governance-explainer-card">
+              <span>3. Thẩm quyền Tiêu hủy (Purge)</span>
+              <p>
+                Chỉ OWNER có quyền xóa vật lý tệp khỏi kho lưu trữ kèm lý do giải trình bắt buộc. Bản ghi sự cố vẫn
+                được lưu vết vĩnh viễn với trạng thái PURGED để đảm bảo tính toàn vẹn.
+              </p>
+            </article>
+          </div>
+
+          {incidents.length === 0 ? (
+            <div className="tender-empty-state" style={{ padding: '2.5rem 1rem', textAlign: 'center' }}>
+              <p className="eyebrow" style={{ color: '#22c55e', letterSpacing: '0.08em' }}>
+                HỆ THỐNG AN TOÀN · ZERO TRUST
+              </p>
+              <h3 style={{ marginTop: '0.5rem' }}>Không có sự cố bảo mật nào</h3>
+              <p className="muted" style={{ maxWidth: '540px', margin: '0.5rem auto 0' }}>
+                Tất cả các tệp tài liệu E-HSMT, Brochure kỹ thuật và Chứng chỉ CFS được tải lên tổ chức đều vượt qua
+                bước kiểm định Magic Bytes và chữ ký băm toàn vẹn SHA-256.
+              </p>
+            </div>
+          ) : (
+            <div className="governance-table-wrap">
+              <table className="governance-table" aria-label="Danh sách sự cố bảo mật">
+                <thead>
+                  <tr>
+                    <th>Mã sự cố & Thời gian</th>
+                    <th>Tên tệp vi phạm</th>
+                    <th>Mã băm SHA-256</th>
+                    <th>Lý do cách ly</th>
+                    <th>Người tải lên</th>
+                    <th>Trạng thái</th>
+                    <th style={{ textAlign: 'right' }}>Thao tác</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {incidents.map((inc) => (
+                    <tr key={inc.id}>
+                      <td>
+                        <strong>{inc.reference}</strong>
+                        <br />
+                        <small className="muted">
+                          {new Date(inc.uploadedAt).toLocaleString('vi-VN')}
+                        </small>
+                      </td>
+                      <td>
+                        <span style={{ fontWeight: 600, color: '#f87171' }}>{inc.fileName}</span>
+                      </td>
+                      <td>
+                        <code style={{ fontSize: '0.75rem', wordBreak: 'break-all' }}>
+                          {inc.sha256.slice(0, 16)}...{inc.sha256.slice(-8)}
+                        </code>
+                      </td>
+                      <td>
+                        <span
+                          style={{
+                            display: 'inline-block',
+                            padding: '2px 8px',
+                            borderRadius: '4px',
+                            background: 'rgba(239, 68, 68, 0.15)',
+                            color: '#ef4444',
+                            fontSize: '0.75rem',
+                            fontWeight: 700,
+                            marginBottom: '0.25rem',
+                          }}
+                        >
+                          CÁCH LY AN TOÀN
+                        </span>
+                        <p style={{ margin: 0, fontSize: '0.825rem' }} className="muted">
+                          {inc.reason}
+                        </p>
+                      </td>
+                      <td>
+                        <strong>{inc.uploadedByUserName}</strong>
+                        {inc.ipAddress && (
+                          <>
+                            <br />
+                            <small className="muted">IP: {inc.ipAddress}</small>
+                          </>
+                        )}
+                      </td>
+                      <td>
+                        <span
+                          className={
+                            inc.status === 'PURGED'
+                              ? 'governance-org-status-badge'
+                              : inc.status === 'RESOLVED'
+                                ? 'governance-org-status-badge is-active'
+                                : 'governance-org-status-badge is-danger'
+                          }
+                        >
+                          <i aria-hidden="true" />
+                          {inc.status === 'PURGED'
+                            ? 'ĐÃ TIÊU HỦY'
+                            : inc.status === 'RESOLVED'
+                              ? 'ĐÃ GIẢI QUYẾT'
+                              : 'ĐANG CÁCH LY'}
+                        </span>
+                      </td>
+                      <td style={{ textAlign: 'right' }}>
+                        {inc.status !== 'PURGED' ? (
+                          <button
+                            type="button"
+                            className="tender-chip-button is-danger-chip"
+                            onClick={() => {
+                              setShowPurgeModal(inc)
+                              setPurgeReason('')
+                            }}
+                          >
+                            Tiêu hủy (Purge)
+                          </button>
+                        ) : (
+                          <small className="muted">Không khả dụng</small>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </section>
+      )}
+
       {activeTab === 'audits' && (
         <section className="surface tender-audit-panel" aria-label="Bảng kiểm toán cấp tổ chức">
           <div className="tender-entry-heading">
@@ -731,6 +912,144 @@ export function WorkspaceGovernanceView({ slug }: { slug: string }) {
             </>
           )}
         </section>
+      )}
+
+      {showPurgeModal && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="purge-modal-title"
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 9999,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            background: 'rgba(0, 0, 0, 0.75)',
+            backdropFilter: 'blur(4px)',
+            padding: '1rem',
+          }}
+        >
+          <div
+            className="surface"
+            style={{
+              maxWidth: '520px',
+              width: '100%',
+              borderRadius: '16px',
+              padding: '1.75rem',
+              boxShadow: '0 24px 48px rgba(0, 0, 0, 0.5)',
+              border: '1px solid rgba(239, 68, 68, 0.35)',
+            }}
+          >
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'flex-start',
+                justifyContent: 'space-between',
+                marginBottom: '1rem',
+              }}
+            >
+              <div>
+                <span
+                  style={{
+                    display: 'inline-block',
+                    padding: '2px 8px',
+                    borderRadius: '4px',
+                    background: 'rgba(239, 68, 68, 0.2)',
+                    color: '#ef4444',
+                    fontSize: '0.75rem',
+                    fontWeight: 700,
+                    marginBottom: '0.25rem',
+                  }}
+                >
+                  ĐẶC QUYỀN OWNER · TIÊU HỦY VĨNH VIỄN
+                </span>
+                <h3 id="purge-modal-title" style={{ margin: 0, fontSize: '1.2rem', color: '#ef4444' }}>
+                  Tiêu hủy tệp cách ly bảo mật
+                </h3>
+              </div>
+              <button
+                type="button"
+                className="tender-icon-button"
+                onClick={() => setShowPurgeModal(null)}
+                aria-label="Đóng"
+              >
+                ✕
+              </button>
+            </div>
+
+            <p className="muted" style={{ fontSize: '0.875rem', lineHeight: 1.5, margin: '0 0 1rem' }}>
+              Hành động này sẽ <strong>xóa sạch nhị phân (binary)</strong> của tệp{' '}
+              <strong style={{ color: '#f87171' }}>{showPurgeModal.fileName}</strong> khỏi kho lưu trữ.
+              Dữ liệu kiểm toán, mã băm SHA-256 và lý do tiêu hủy sẽ được lưu vết vĩnh viễn trên sổ cái.
+            </p>
+
+            <form
+              onSubmit={(e) => {
+                e.preventDefault()
+                if (!purgeReason.trim() || purgingId) return
+                setPurgingId(showPurgeModal.id)
+                purgeSecurityIncident(slug, showPurgeModal.id, purgeReason.trim())
+                  .then(() => {
+                    setShowPurgeModal(null)
+                    setPurgeReason('')
+                    setPolicyNotice('Đã tiêu hủy tệp bị cách ly và cập nhật sổ cái kiểm toán an toàn.')
+                    return load()
+                  })
+                  .catch((err: unknown) => {
+                    setError(err instanceof ApiError ? err.message : 'Không thể tiêu hủy tệp cách ly.')
+                  })
+                  .finally(() => {
+                    setPurgingId(null)
+                  })
+              }}
+            >
+              <label style={{ display: 'block', marginBottom: '1.25rem' }}>
+                <span style={{ fontSize: '0.8rem', fontWeight: 600, display: 'block', marginBottom: '0.4rem' }}>
+                  Lý do tiêu hủy bắt buộc (Tối thiểu 6 ký tự để ghi vết kiểm toán)
+                </span>
+                <textarea
+                  required
+                  minLength={6}
+                  rows={3}
+                  style={{
+                    width: '100%',
+                    padding: '0.75rem',
+                    borderRadius: '8px',
+                    border: '1px solid var(--border-subtle, rgba(255,255,255,0.15))',
+                    background: 'var(--surface-sunken, rgba(0,0,0,0.3))',
+                    color: 'var(--text-primary, #fff)',
+                    fontSize: '0.875rem',
+                    resize: 'vertical',
+                  }}
+                  placeholder="Ví dụ: Tệp giả mạo chữ ký định dạng PE/Windows executable, đã xử lý kỷ luật nhân sự và tiêu hủy theo quy định..."
+                  value={purgeReason}
+                  onChange={(e) => setPurgeReason(e.target.value)}
+                />
+              </label>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' }}>
+                <button
+                  type="button"
+                  className="button button-secondary"
+                  onClick={() => setShowPurgeModal(null)}
+                  disabled={Boolean(purgingId)}
+                >
+                  Hủy bỏ
+                </button>
+                <button
+                  type="submit"
+                  className="button button-primary"
+                  style={{ backgroundColor: '#ef4444', borderColor: '#ef4444', color: '#fff' }}
+                  disabled={!purgeReason.trim() || Boolean(purgingId)}
+                >
+                  {purgingId ? 'Đang tiêu hủy...' : 'Xác nhận tiêu hủy vĩnh viễn'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
       )}
     </div>
   )

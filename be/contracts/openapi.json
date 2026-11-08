@@ -2080,6 +2080,521 @@
           "catalog"
         ]
       }
+    },
+    "/api/v1/organizations/{slug}/documents/policy-consent": {
+      "get": {
+        "operationId": "DocumentsController_getPolicyConsent",
+        "parameters": [
+          {
+            "name": "slug",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PolicyConsentStatusDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "medtender_access": []
+          }
+        ],
+        "tags": [
+          "documents"
+        ]
+      },
+      "post": {
+        "operationId": "DocumentsController_acceptPolicyConsent",
+        "parameters": [
+          {
+            "name": "slug",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AcceptPolicyConsentDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PolicyConsentStatusDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "medtender_access": []
+          }
+        ],
+        "tags": [
+          "documents"
+        ]
+      }
+    },
+    "/api/v1/organizations/{slug}/documents/upload-intents": {
+      "post": {
+        "operationId": "DocumentsController_createUploadIntent",
+        "parameters": [
+          {
+            "name": "slug",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RequestUploadIntentDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UploadIntentResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "medtender_access": []
+          }
+        ],
+        "tags": [
+          "documents"
+        ]
+      }
+    },
+    "/api/v1/organizations/{slug}/documents/upload-stream/{intentId}": {
+      "put": {
+        "operationId": "DocumentsController_uploadStream",
+        "parameters": [
+          {
+            "name": "slug",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "intentId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "medtender_access": []
+          }
+        ],
+        "tags": [
+          "documents"
+        ]
+      }
+    },
+    "/api/v1/organizations/{slug}/documents/{documentId}/versions/{versionNumber}/complete": {
+      "post": {
+        "operationId": "DocumentsController_completeUpload",
+        "parameters": [
+          {
+            "name": "slug",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "documentId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "versionNumber",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CompleteUploadDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DocumentDetailDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "medtender_access": []
+          }
+        ],
+        "tags": [
+          "documents"
+        ]
+      }
+    },
+    "/api/v1/organizations/{slug}/documents": {
+      "get": {
+        "operationId": "DocumentsController_list",
+        "parameters": [
+          {
+            "name": "slug",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "tenderId",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "productId",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/DocumentDetailDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "medtender_access": []
+          }
+        ],
+        "tags": [
+          "documents"
+        ]
+      }
+    },
+    "/api/v1/organizations/{slug}/documents/{documentId}": {
+      "get": {
+        "operationId": "DocumentsController_detail",
+        "parameters": [
+          {
+            "name": "slug",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "documentId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DocumentDetailDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "medtender_access": []
+          }
+        ],
+        "tags": [
+          "documents"
+        ]
+      },
+      "delete": {
+        "operationId": "DocumentsController_deleteDocument",
+        "parameters": [
+          {
+            "name": "slug",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "documentId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "medtender_access": []
+          }
+        ],
+        "tags": [
+          "documents"
+        ]
+      }
+    },
+    "/api/v1/organizations/{slug}/documents/{documentId}/versions/{versionId}/download-link": {
+      "post": {
+        "operationId": "DocumentsController_getDownloadLink",
+        "parameters": [
+          {
+            "name": "slug",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "documentId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "versionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DownloadLinkResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "medtender_access": []
+          }
+        ],
+        "tags": [
+          "documents"
+        ]
+      }
+    },
+    "/api/v1/organizations/{slug}/documents/download-stream/{fileAssetId}": {
+      "get": {
+        "operationId": "DocumentsController_downloadStream",
+        "parameters": [
+          {
+            "name": "slug",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "fileAssetId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "token",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "documents"
+        ]
+      }
+    },
+    "/api/v1/organizations/{slug}/documents/governance/security-incidents": {
+      "get": {
+        "operationId": "DocumentsController_listIncidents",
+        "parameters": [
+          {
+            "name": "slug",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/SecurityIncidentSummaryDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "medtender_access": []
+          }
+        ],
+        "tags": [
+          "documents"
+        ]
+      }
+    },
+    "/api/v1/organizations/{slug}/documents/governance/security-incidents/{incidentId}/purge": {
+      "post": {
+        "operationId": "DocumentsController_purgeIncident",
+        "parameters": [
+          {
+            "name": "slug",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "incidentId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "medtender_access": []
+          }
+        ],
+        "tags": [
+          "documents"
+        ]
+      }
     }
   },
   "info": {
@@ -3690,6 +4205,505 @@
             "nullable": true
           }
         }
+      },
+      "PolicyConsentStatusDto": {
+        "type": "object",
+        "properties": {
+          "hasConsented": {
+            "type": "boolean"
+          },
+          "currentPolicyVersion": {
+            "type": "string"
+          },
+          "acceptedAt": {
+            "format": "date-time",
+            "type": "string",
+            "nullable": true
+          },
+          "termsTitle": {
+            "type": "string"
+          },
+          "termsSummary": {
+            "type": "string"
+          },
+          "privacyTitle": {
+            "type": "string"
+          },
+          "privacySummary": {
+            "type": "string"
+          },
+          "aiNoticeTitle": {
+            "type": "string"
+          },
+          "aiNoticeSummary": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "hasConsented",
+          "currentPolicyVersion",
+          "acceptedAt",
+          "termsTitle",
+          "termsSummary",
+          "privacyTitle",
+          "privacySummary",
+          "aiNoticeTitle",
+          "aiNoticeSummary"
+        ]
+      },
+      "AcceptPolicyConsentDto": {
+        "type": "object",
+        "properties": {
+          "policyVersion": {
+            "type": "string"
+          },
+          "termsAccepted": {
+            "type": "boolean"
+          },
+          "privacyAccepted": {
+            "type": "boolean"
+          },
+          "aiNoticeAccepted": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "policyVersion",
+          "termsAccepted",
+          "privacyAccepted",
+          "aiNoticeAccepted"
+        ]
+      },
+      "RequestUploadIntentDto": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string"
+          },
+          "originalFilename": {
+            "type": "string"
+          },
+          "mimeType": {
+            "type": "string"
+          },
+          "sizeBytes": {
+            "type": "number"
+          },
+          "sha256": {
+            "type": "string"
+          },
+          "documentType": {
+            "type": "string",
+            "enum": [
+              "TENDER_DOC",
+              "CATALOG_EVIDENCE",
+              "CERTIFICATE",
+              "OTHER"
+            ]
+          },
+          "classification": {
+            "type": "string",
+            "enum": [
+              "INTERNAL",
+              "CONFIDENTIAL",
+              "RESTRICTED"
+            ]
+          },
+          "tenderId": {
+            "type": "string",
+            "nullable": true
+          },
+          "productId": {
+            "type": "string",
+            "nullable": true
+          },
+          "documentId": {
+            "type": "string",
+            "nullable": true
+          },
+          "notes": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "title",
+          "originalFilename",
+          "mimeType",
+          "sizeBytes",
+          "sha256"
+        ]
+      },
+      "UploadIntentResponseDto": {
+        "type": "object",
+        "properties": {
+          "intentId": {
+            "type": "string"
+          },
+          "uploadToken": {
+            "type": "string"
+          },
+          "uploadUrl": {
+            "type": "string"
+          },
+          "expiresAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "documentId": {
+            "type": "string"
+          },
+          "versionNumber": {
+            "type": "number"
+          },
+          "versionLabel": {
+            "type": "string"
+          },
+          "maxSizeBytes": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "intentId",
+          "uploadToken",
+          "uploadUrl",
+          "expiresAt",
+          "documentId",
+          "versionNumber",
+          "versionLabel",
+          "maxSizeBytes"
+        ]
+      },
+      "CompleteUploadDto": {
+        "type": "object",
+        "properties": {
+          "idempotencyKey": {
+            "type": "string"
+          }
+        }
+      },
+      "LinkedTenderSummaryDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "reference": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "id",
+          "title",
+          "reference"
+        ]
+      },
+      "LinkedProductSummaryDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "sku": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "sku"
+        ]
+      },
+      "DocumentVersionSummaryDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "versionNumber": {
+            "type": "number"
+          },
+          "versionLabel": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "DRAFT",
+              "READY",
+              "ARCHIVED"
+            ]
+          },
+          "originalFilename": {
+            "type": "string"
+          },
+          "sizeBytes": {
+            "type": "number"
+          },
+          "mimeType": {
+            "type": "string"
+          },
+          "sha256": {
+            "type": "string"
+          },
+          "scanStatus": {
+            "type": "string",
+            "enum": [
+              "PENDING",
+              "SCANNING",
+              "CLEAN",
+              "QUARANTINED"
+            ]
+          },
+          "quarantineReason": {
+            "type": "string",
+            "nullable": true
+          },
+          "rightsConfirmed": {
+            "type": "boolean"
+          },
+          "rightsConfirmedAt": {
+            "format": "date-time",
+            "type": "string",
+            "nullable": true
+          },
+          "acceptedPolicyVersion": {
+            "type": "string",
+            "nullable": true
+          },
+          "notes": {
+            "type": "string",
+            "nullable": true
+          },
+          "createdAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "updatedAt": {
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "versionNumber",
+          "versionLabel",
+          "status",
+          "originalFilename",
+          "sizeBytes",
+          "mimeType",
+          "sha256",
+          "scanStatus",
+          "quarantineReason",
+          "rightsConfirmed",
+          "rightsConfirmedAt",
+          "acceptedPolicyVersion",
+          "notes",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "DocumentDetailDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "organizationId": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "documentType": {
+            "type": "string",
+            "enum": [
+              "TENDER_DOC",
+              "CATALOG_EVIDENCE",
+              "CERTIFICATE",
+              "OTHER"
+            ]
+          },
+          "classification": {
+            "type": "string",
+            "enum": [
+              "INTERNAL",
+              "CONFIDENTIAL",
+              "RESTRICTED"
+            ]
+          },
+          "description": {
+            "type": "string",
+            "nullable": true
+          },
+          "tenderId": {
+            "type": "string",
+            "nullable": true
+          },
+          "productId": {
+            "type": "string",
+            "nullable": true
+          },
+          "tender": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/LinkedTenderSummaryDto"
+              }
+            ]
+          },
+          "product": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/LinkedProductSummaryDto"
+              }
+            ]
+          },
+          "createdAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "updatedAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "versionCount": {
+            "type": "number"
+          },
+          "latestVersion": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/DocumentVersionSummaryDto"
+              }
+            ]
+          },
+          "versions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DocumentVersionSummaryDto"
+            }
+          }
+        },
+        "required": [
+          "id",
+          "organizationId",
+          "title",
+          "documentType",
+          "classification",
+          "description",
+          "tenderId",
+          "productId",
+          "tender",
+          "product",
+          "createdAt",
+          "updatedAt",
+          "versionCount",
+          "latestVersion",
+          "versions"
+        ]
+      },
+      "DownloadLinkResponseDto": {
+        "type": "object",
+        "properties": {
+          "downloadUrl": {
+            "type": "string"
+          },
+          "expiresAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "expiresInSeconds": {
+            "type": "number"
+          },
+          "fileName": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "downloadUrl",
+          "expiresAt",
+          "expiresInSeconds",
+          "fileName"
+        ]
+      },
+      "SecurityIncidentSummaryDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "reference": {
+            "type": "string"
+          },
+          "fileName": {
+            "type": "string"
+          },
+          "sha256": {
+            "type": "string"
+          },
+          "reason": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "ipAddress": {
+            "type": "string",
+            "nullable": true
+          },
+          "uploadedByUserName": {
+            "type": "string"
+          },
+          "uploadedAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "resolvedByUserName": {
+            "type": "string",
+            "nullable": true
+          },
+          "resolvedAt": {
+            "format": "date-time",
+            "type": "string",
+            "nullable": true
+          },
+          "purgedByUserName": {
+            "type": "string",
+            "nullable": true
+          },
+          "purgedAt": {
+            "format": "date-time",
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "id",
+          "reference",
+          "fileName",
+          "sha256",
+          "reason",
+          "status",
+          "ipAddress",
+          "uploadedByUserName",
+          "uploadedAt",
+          "resolvedByUserName",
+          "resolvedAt",
+          "purgedByUserName",
+          "purgedAt"
+        ]
       }
     }
   }

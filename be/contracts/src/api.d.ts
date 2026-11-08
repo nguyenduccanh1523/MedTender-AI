@@ -596,6 +596,166 @@ export interface paths {
         patch: operations["CatalogController_updateSpecification"];
         trace?: never;
     };
+    "/api/v1/organizations/{slug}/documents/policy-consent": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["DocumentsController_getPolicyConsent"];
+        put?: never;
+        post: operations["DocumentsController_acceptPolicyConsent"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/organizations/{slug}/documents/upload-intents": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["DocumentsController_createUploadIntent"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/organizations/{slug}/documents/upload-stream/{intentId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["DocumentsController_uploadStream"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/organizations/{slug}/documents/{documentId}/versions/{versionNumber}/complete": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["DocumentsController_completeUpload"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/organizations/{slug}/documents": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["DocumentsController_list"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/organizations/{slug}/documents/{documentId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["DocumentsController_detail"];
+        put?: never;
+        post?: never;
+        delete: operations["DocumentsController_deleteDocument"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/organizations/{slug}/documents/{documentId}/versions/{versionId}/download-link": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["DocumentsController_getDownloadLink"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/organizations/{slug}/documents/download-stream/{fileAssetId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["DocumentsController_downloadStream"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/organizations/{slug}/documents/governance/security-incidents": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["DocumentsController_listIncidents"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/organizations/{slug}/documents/governance/security-incidents/{incidentId}/purge": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["DocumentsController_purgeIncident"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -1015,6 +1175,132 @@ export interface components {
             unit?: string | null;
             sourceLabel?: string;
             sourceQuote?: string | null;
+        };
+        PolicyConsentStatusDto: {
+            hasConsented: boolean;
+            currentPolicyVersion: string;
+            /** Format: date-time */
+            acceptedAt: string | null;
+            termsTitle: string;
+            termsSummary: string;
+            privacyTitle: string;
+            privacySummary: string;
+            aiNoticeTitle: string;
+            aiNoticeSummary: string;
+        };
+        AcceptPolicyConsentDto: {
+            policyVersion: string;
+            termsAccepted: boolean;
+            privacyAccepted: boolean;
+            aiNoticeAccepted: boolean;
+        };
+        RequestUploadIntentDto: {
+            title: string;
+            originalFilename: string;
+            mimeType: string;
+            sizeBytes: number;
+            sha256: string;
+            /** @enum {string} */
+            documentType?: "TENDER_DOC" | "CATALOG_EVIDENCE" | "CERTIFICATE" | "OTHER";
+            /** @enum {string} */
+            classification?: "INTERNAL" | "CONFIDENTIAL" | "RESTRICTED";
+            tenderId?: string | null;
+            productId?: string | null;
+            documentId?: string | null;
+            notes?: string | null;
+        };
+        UploadIntentResponseDto: {
+            intentId: string;
+            uploadToken: string;
+            uploadUrl: string;
+            /** Format: date-time */
+            expiresAt: string;
+            documentId: string;
+            versionNumber: number;
+            versionLabel: string;
+            maxSizeBytes: number;
+        };
+        CompleteUploadDto: {
+            idempotencyKey?: string;
+        };
+        LinkedTenderSummaryDto: {
+            id: string;
+            title: string;
+            reference: string | null;
+        };
+        LinkedProductSummaryDto: {
+            id: string;
+            name: string;
+            sku: string;
+        };
+        DocumentVersionSummaryDto: {
+            id: string;
+            versionNumber: number;
+            versionLabel: string;
+            /** @enum {string} */
+            status: "DRAFT" | "READY" | "ARCHIVED";
+            originalFilename: string;
+            sizeBytes: number;
+            mimeType: string;
+            sha256: string;
+            /** @enum {string} */
+            scanStatus: "PENDING" | "SCANNING" | "CLEAN" | "QUARANTINED";
+            quarantineReason: string | null;
+            rightsConfirmed: boolean;
+            /** Format: date-time */
+            rightsConfirmedAt: string | null;
+            acceptedPolicyVersion: string | null;
+            notes: string | null;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+        };
+        DocumentDetailDto: {
+            id: string;
+            organizationId: string;
+            title: string;
+            /** @enum {string} */
+            documentType: "TENDER_DOC" | "CATALOG_EVIDENCE" | "CERTIFICATE" | "OTHER";
+            /** @enum {string} */
+            classification: "INTERNAL" | "CONFIDENTIAL" | "RESTRICTED";
+            description: string | null;
+            tenderId: string | null;
+            productId: string | null;
+            tender: components["schemas"]["LinkedTenderSummaryDto"] | null;
+            product: components["schemas"]["LinkedProductSummaryDto"] | null;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+            versionCount: number;
+            latestVersion: components["schemas"]["DocumentVersionSummaryDto"] | null;
+            versions: components["schemas"]["DocumentVersionSummaryDto"][];
+        };
+        DownloadLinkResponseDto: {
+            downloadUrl: string;
+            /** Format: date-time */
+            expiresAt: string;
+            expiresInSeconds: number;
+            fileName: string;
+        };
+        SecurityIncidentSummaryDto: {
+            id: string;
+            reference: string;
+            fileName: string;
+            sha256: string;
+            reason: string;
+            status: string;
+            ipAddress: string | null;
+            uploadedByUserName: string;
+            /** Format: date-time */
+            uploadedAt: string;
+            resolvedByUserName: string | null;
+            /** Format: date-time */
+            resolvedAt: string | null;
+            purgedByUserName: string | null;
+            /** Format: date-time */
+            purgedAt: string | null;
         };
     };
     responses: never;
@@ -2143,6 +2429,276 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["ProductVersionDetailDto"];
                 };
+            };
+        };
+    };
+    DocumentsController_getPolicyConsent: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PolicyConsentStatusDto"];
+                };
+            };
+        };
+    };
+    DocumentsController_acceptPolicyConsent: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AcceptPolicyConsentDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PolicyConsentStatusDto"];
+                };
+            };
+        };
+    };
+    DocumentsController_createUploadIntent: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RequestUploadIntentDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UploadIntentResponseDto"];
+                };
+            };
+        };
+    };
+    DocumentsController_uploadStream: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+                intentId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    DocumentsController_completeUpload: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+                documentId: string;
+                versionNumber: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CompleteUploadDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DocumentDetailDto"];
+                };
+            };
+        };
+    };
+    DocumentsController_list: {
+        parameters: {
+            query: {
+                tenderId: string;
+                productId: string;
+            };
+            header?: never;
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DocumentDetailDto"][];
+                };
+            };
+        };
+    };
+    DocumentsController_detail: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+                documentId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DocumentDetailDto"];
+                };
+            };
+        };
+    };
+    DocumentsController_deleteDocument: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+                documentId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    DocumentsController_getDownloadLink: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+                documentId: string;
+                versionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DownloadLinkResponseDto"];
+                };
+            };
+        };
+    };
+    DocumentsController_downloadStream: {
+        parameters: {
+            query: {
+                token: string;
+            };
+            header?: never;
+            path: {
+                slug: string;
+                fileAssetId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    DocumentsController_listIncidents: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SecurityIncidentSummaryDto"][];
+                };
+            };
+        };
+    };
+    DocumentsController_purgeIncident: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+                incidentId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };

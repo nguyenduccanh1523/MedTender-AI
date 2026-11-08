@@ -28,6 +28,15 @@ export function canManageCatalog(role: WorkspaceRole | null) {
   return role === 'OWNER' || role === 'ADMIN' || role === 'CATALOG_MANAGER'
 }
 
+export function canManageDocuments(role: WorkspaceRole | null) {
+  return (
+    role === 'OWNER' ||
+    role === 'ADMIN' ||
+    role === 'BID_MANAGER' ||
+    role === 'CATALOG_MANAGER'
+  )
+}
+
 export function canManageOrganizationGovernance(role: WorkspaceRole | null) {
   return role === 'OWNER'
 }
