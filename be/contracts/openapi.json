@@ -2595,6 +2595,42 @@
           "documents"
         ]
       }
+    },
+    "/api/v1/organizations/{slug}/documents/governance/security-incidents/{incidentId}/suspend-uploader": {
+      "post": {
+        "operationId": "DocumentsController_suspendIncidentUploader",
+        "parameters": [
+          {
+            "name": "slug",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "incidentId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "medtender_access": []
+          }
+        ],
+        "tags": [
+          "documents"
+        ]
+      }
     }
   },
   "info": {
@@ -2647,6 +2683,10 @@
             "format": "password",
             "maxLength": 128
           },
+          "turnstileToken": {
+            "type": "string",
+            "description": "Cloudflare Turnstile anti-bot token"
+          },
           "name": {
             "type": "string",
             "minLength": 2,
@@ -2697,6 +2737,10 @@
             "type": "string",
             "format": "password",
             "maxLength": 128
+          },
+          "turnstileToken": {
+            "type": "string",
+            "description": "Cloudflare Turnstile anti-bot token"
           }
         },
         "required": [
@@ -3316,6 +3360,10 @@
             "type": "string",
             "minLength": 8,
             "maxLength": 30
+          },
+          "turnstileToken": {
+            "type": "string",
+            "description": "Cloudflare Turnstile token for anti-bot validation"
           }
         },
         "required": [
@@ -4324,6 +4372,10 @@
           "notes": {
             "type": "string",
             "nullable": true
+          },
+          "turnstileToken": {
+            "type": "string",
+            "description": "Cloudflare Turnstile anti-bot token"
           }
         },
         "required": [
@@ -4510,6 +4562,33 @@
           "updatedAt"
         ]
       },
+      "SecurityIncidentNoticeDto": {
+        "type": "object",
+        "properties": {
+          "incidentReference": {
+            "type": "string"
+          },
+          "reason": {
+            "type": "string"
+          },
+          "isQuarantined": {
+            "type": "boolean"
+          },
+          "autoDemotedToViewer": {
+            "type": "boolean"
+          },
+          "newRole": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "incidentReference",
+          "reason",
+          "isQuarantined",
+          "autoDemotedToViewer",
+          "newRole"
+        ]
+      },
       "DocumentDetailDto": {
         "type": "object",
         "properties": {
@@ -4594,6 +4673,15 @@
             "items": {
               "$ref": "#/components/schemas/DocumentVersionSummaryDto"
             }
+          },
+          "securityIncidentNotice": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/SecurityIncidentNoticeDto"
+              }
+            ]
           }
         },
         "required": [
@@ -4666,6 +4754,13 @@
           "uploadedByUserName": {
             "type": "string"
           },
+          "uploadedByUserId": {
+            "type": "string",
+            "nullable": true
+          },
+          "isUploaderSuspended": {
+            "type": "boolean"
+          },
           "uploadedAt": {
             "format": "date-time",
             "type": "string"
@@ -4698,6 +4793,7 @@
           "status",
           "ipAddress",
           "uploadedByUserName",
+          "uploadedByUserId",
           "uploadedAt",
           "resolvedByUserName",
           "resolvedAt",

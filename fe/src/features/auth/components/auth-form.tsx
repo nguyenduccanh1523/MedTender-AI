@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useEffect, useState, useSyncExternalStore, type FormEvent } from 'react'
 
+import { TurnstileWidget } from '../../../components/security/turnstile-widget'
 import { submitAuth, type PublicUser } from '../api'
 import { saveCachedUser } from '../session-cache'
 
@@ -23,6 +24,7 @@ export function AuthForm({ mode, onAuthenticated, onSwitchMode }: AuthFormProps)
   const ready = useSyncExternalStore(subscribeToHydration, clientReady, serverReady)
   const [pending, setPending] = useState(false)
   const [error, setError] = useState('')
+  const [turnstileToken, setTurnstileToken] = useState<string>('')
 
   useEffect(() => {
     router.prefetch('/organizations')
@@ -33,7 +35,11 @@ export function AuthForm({ mode, onAuthenticated, onSwitchMode }: AuthFormProps)
     event.preventDefault()
     if (!ready || pending) return
     const fields = new FormData(event.currentTarget)
-    const credentials = { email: String(fields.get('email') ?? ''), password: String(fields.get('password') ?? '') }
+    const credentials = {
+      email: String(fields.get('email') ?? ''),
+      password: String(fields.get('password') ?? ''),
+      turnstileToken: turnstileToken || undefined,
+    }
     setPending(true)
     setError('')
     try {
@@ -68,6 +74,7 @@ export function AuthForm({ mode, onAuthenticated, onSwitchMode }: AuthFormProps)
           />
         </label>
         {registering && <p className="input-hint" id="password-hint">Dùng ít nhất 12 ký tự.</p>}
+        <TurnstileWidget onSuccess={setTurnstileToken} />
         {error && <p className="notice notice-error" role="alert">{error}</p>}
         <button className="button button-primary" type="submit" disabled={!ready || pending}>
           {pending ? 'Đang xử lý…' : registering ? 'Tạo tài khoản' : 'Đăng nhập'}

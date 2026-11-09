@@ -8,11 +8,13 @@ import { TendersModule } from './modules/tenders/tenders.module'
 import { CatalogModule } from './modules/catalog/catalog.module'
 import { DocumentsModule } from './modules/documents/documents.module'
 import { ObjectStorageModule } from './integrations/object-storage/object-storage.module'
+import { TurnstileModule } from './integrations/turnstile/turnstile.module'
 import { AiPoliciesModule } from './modules/ai-policies/ai-policies.module'
 
 @Module({
   imports: [
     ObjectStorageModule,
+    TurnstileModule,
     AiPoliciesModule,
     IdentityModule,
     OrganizationsModule,

@@ -9,6 +9,8 @@ export class CreateOrganizationApplicationDto {
   @ApiProperty({ minLength: 2, maxLength: 100 }) contactName!: string
   @ApiProperty({ format: 'email', maxLength: 254 }) contactEmail!: string
   @ApiProperty({ minLength: 8, maxLength: 30 }) contactPhone!: string
+  @ApiPropertyOptional({ description: 'Cloudflare Turnstile token for anti-bot validation' })
+  turnstileToken?: string
 }
 
 export class OrganizationApplicationReceiptDto {

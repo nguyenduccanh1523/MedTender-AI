@@ -4,6 +4,12 @@ import Link from 'next/link'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { ApiError } from '../../../lib/api/client'
 import {
+  loadResource,
+  readResource,
+  writeResource,
+  invalidateResource,
+} from '../../../lib/api/resource-cache'
+import {
   canManageDocuments,
   useWorkspaceRole,
 } from '../../organizations/workspace-permissions'
@@ -40,8 +46,14 @@ export function DocumentsManagementView({ slug }: { slug: string }) {
   const canUpload = canManageDocuments(role)
   const isOwner = role === 'OWNER'
 
-  const [documents, setDocuments] = useState<DocumentDetail[]>([])
-  const [loading, setLoading] = useState(true)
+  const docsCacheKey = `documents:${slug}`
+  const consentCacheKey = `consent:${slug}`
+
+  const cachedDocs = readResource<DocumentDetail[]>(docsCacheKey)
+  const cachedConsent = readResource<PolicyConsentStatus>(consentCacheKey)
+
+  const [documents, setDocuments] = useState<DocumentDetail[]>(cachedDocs ?? [])
+  const [loading, setLoading] = useState(cachedDocs === undefined)
   const [error, setError] = useState<string | null>(null)
   const [docToDelete, setDocToDelete] = useState<DocumentDetail | null>(null)
   const [isDeleting, setIsDeleting] = useState(false)
@@ -53,66 +65,42 @@ export function DocumentsManagementView({ slug }: { slug: string }) {
   const [classFilter, setClassFilter] = useState<ClassificationFilter>('ALL')
 
   // Policy consent status & modals
-  const [consentStatus, setConsentStatus] = useState<PolicyConsentStatus | null>(null)
+  const [consentStatus, setConsentStatus] = useState<PolicyConsentStatus | null>(cachedConsent ?? null)
   const [showConsentModal, setShowConsentModal] = useState(false)
   const [showUploadModal, setShowUploadModal] = useState(false)
 
-  // Download countdown toast (120s signed link)
-  const [downloadToast, setDownloadToast] = useState<{
-    fileName: string
-    url: string
-    secondsLeft: number
-  } | null>(null)
-
-  const loadData = useCallback(async () => {
-    setLoading(true)
+  const loadData = useCallback(async (force = false) => {
+    if (force) {
+      invalidateResource(docsCacheKey)
+      invalidateResource(consentCacheKey)
+      setLoading(true)
+    }
     setError(null)
     try {
       const [docs, consent] = await Promise.all([
-        listDocuments(slug),
-        getPolicyConsentStatus(slug),
+        force ? listDocuments(slug) : loadResource(docsCacheKey, () => listDocuments(slug)),
+        force ? getPolicyConsentStatus(slug) : loadResource(consentCacheKey, () => getPolicyConsentStatus(slug)),
       ])
+      writeResource(docsCacheKey, docs)
+      writeResource(consentCacheKey, consent)
       setDocuments(docs)
       setConsentStatus(consent)
     } catch (err: unknown) {
-      setError(err instanceof ApiError ? err.message : 'Không tải được danh sách tài liệu.')
+      if (!cachedDocs) {
+        setError(err instanceof ApiError ? err.message : 'Không tải được danh sách tài liệu.')
+      }
     } finally {
       setLoading(false)
     }
-  }, [slug])
+  }, [slug, docsCacheKey, consentCacheKey, cachedDocs])
 
   useEffect(() => {
     let active = true
-    Promise.all([listDocuments(slug), getPolicyConsentStatus(slug)])
-      .then(([docs, consent]) => {
-        if (active) {
-          setDocuments(docs)
-          setConsentStatus(consent)
-          setLoading(false)
-        }
-      })
-      .catch((err: unknown) => {
-        if (active) {
-          setError(err instanceof ApiError ? err.message : 'Không tải được danh sách tài liệu.')
-          setLoading(false)
-        }
-      })
+    loadData().catch(() => {})
     return () => {
       active = false
     }
-  }, [slug])
-
-  // Countdown timer for 120s signed download link
-  useEffect(() => {
-    if (!downloadToast) return
-    const interval = setInterval(() => {
-      setDownloadToast((prev) => {
-        if (!prev || prev.secondsLeft <= 1) return null
-        return { ...prev, secondsLeft: prev.secondsLeft - 1 }
-      })
-    }, 1000)
-    return () => clearInterval(interval)
-  }, [downloadToast])
+  }, [loadData])
 
   function handleOpenUpload() {
     if (consentStatus && !consentStatus.hasConsented) {
@@ -138,11 +126,6 @@ export function DocumentsManagementView({ slug }: { slug: string }) {
   async function handleDownload(docId: string, versionId: string, fileName: string) {
     try {
       const link = await getDocumentDownloadLink(slug, docId, versionId)
-      setDownloadToast({
-        fileName,
-        url: link.downloadUrl,
-        secondsLeft: link.expiresInSeconds,
-      })
       const a = document.createElement('a')
       a.href = link.downloadUrl
       a.download = fileName
@@ -150,7 +133,7 @@ export function DocumentsManagementView({ slug }: { slug: string }) {
       a.click()
       document.body.removeChild(a)
     } catch (err: unknown) {
-      alert(err instanceof ApiError ? err.message : 'Không thể tạo link tải an toàn.')
+      alert(err instanceof ApiError ? err.message : 'Không thể tạo link tải xuống.')
     }
   }
 
@@ -166,7 +149,7 @@ export function DocumentsManagementView({ slug }: { slug: string }) {
     try {
       await deleteDocument(slug, docToDelete.id)
       setDocToDelete(null)
-      await loadData()
+      await loadData(true)
     } catch (err: unknown) {
       setDeleteError(err instanceof ApiError ? err.message : 'Không thể xóa tài liệu.')
     } finally {
@@ -194,81 +177,6 @@ export function DocumentsManagementView({ slug }: { slug: string }) {
 
   return (
     <section className="surface tender-list-panel" aria-busy={loading}>
-      {/* 120-second Signed Link Countdown Toast */}
-      {downloadToast && (
-        <aside
-          role="status"
-          aria-live="polite"
-          style={{
-            position: 'fixed',
-            bottom: '24px',
-            right: '24px',
-            zIndex: 9999,
-            padding: '16px 20px',
-            borderRadius: '14px',
-            boxShadow: '0 16px 36px rgba(0, 0, 0, 0.45)',
-            background: 'var(--card, #131922)',
-            border: '1px solid var(--accent, #2a9d8f)',
-            maxWidth: '380px',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '8px',
-          }}
-        >
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span
-              style={{
-                fontSize: '12px',
-                fontWeight: 700,
-                color: 'var(--accent, #2a9d8f)',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '6px',
-              }}
-            >
-              <span
-                style={{
-                  display: 'inline-block',
-                  width: '8px',
-                  height: '8px',
-                  borderRadius: '50%',
-                  background: 'var(--accent, #2a9d8f)',
-                }}
-              />
-              ĐÃ CẤP LINK TẢI 1 LẦN
-            </span>
-            <span
-              style={{
-                fontSize: '11px',
-                fontWeight: 800,
-                padding: '2px 8px',
-                borderRadius: '999px',
-                background: 'rgba(42, 157, 143, 0.2)',
-                color: 'var(--accent, #2a9d8f)',
-                border: '1px solid rgba(42, 157, 143, 0.3)',
-              }}
-            >
-              Tự hủy sau: {downloadToast.secondsLeft}s
-            </span>
-          </div>
-          <div
-            style={{
-              fontSize: '13px',
-              fontWeight: 600,
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-              whiteSpace: 'nowrap',
-              color: 'var(--foreground, #fff)',
-            }}
-          >
-            {downloadToast.fileName}
-          </div>
-          <p style={{ fontSize: '11px', color: 'var(--muted, #94a3b8)', margin: 0, lineHeight: 1.4 }}>
-            Link ký số an toàn (TTL 120s), chỉ tải được một lần và tự hủy sau khi tải để bảo vệ tài liệu thầu.
-          </p>
-        </aside>
-      )}
-
       {/* Header bar */}
       <div className="tender-list-header">
         <div>
@@ -328,7 +236,7 @@ export function DocumentsManagementView({ slug }: { slug: string }) {
           <button
             type="button"
             className={loading ? 'tender-icon-button is-spinning' : 'tender-icon-button'}
-            onClick={() => void loadData()}
+            onClick={() => void loadData(true)}
             disabled={loading}
             aria-label="Làm mới danh sách"
             title="Làm mới danh sách tài liệu"
@@ -362,6 +270,18 @@ export function DocumentsManagementView({ slug }: { slug: string }) {
           )}
         </div>
       </div>
+
+      {role === 'VIEWER' && (
+        <div className="viewer-role-banner" role="status">
+          <div className="viewer-role-banner-icon">🛡️</div>
+          <div className="viewer-role-banner-content">
+            <strong>Bạn đang xem với vai trò Chỉ xem (VIEWER)</strong>
+            <p>
+              Theo chính sách phân quyền RBAC & Zero-Trust, tài khoản vai trò VIEWER không có quyền tải lên tài liệu mới. Để đảm bảo an toàn dữ liệu nội bộ, các tài liệu phân loại <strong>Tuyệt mật (RESTRICTED)</strong> và các tệp trong diện <strong>Cách ly (Quarantined)</strong> được ẩn tự động. Nếu cần cấp lại quyền hoặc phục hồi vai trò sau khi kiểm tra sự cố bảo mật, vui lòng liên hệ <strong>ADMIN</strong> hoặc <strong>OWNER</strong> của tổ chức.
+            </p>
+          </div>
+        </div>
+      )}
 
       {error && (
         <p className="notice notice-error" role="alert">
@@ -506,168 +426,113 @@ export function DocumentsManagementView({ slug }: { slug: string }) {
           )}
         </div>
       ) : (
-        <ul className="organization-list tender-cards-list">
+        <ul className="organization-list tender-cards-list" style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
           {filteredDocuments.map((doc) => {
             const latest = doc.latestVersion
             const isClean = latest?.scanStatus === 'CLEAN'
             const isQuarantined = latest?.scanStatus === 'QUARANTINED'
             const isPending = latest?.scanStatus === 'PENDING' || latest?.scanStatus === 'SCANNING'
 
+            const mime = latest?.mimeType?.toLowerCase() ?? ''
+            const fileTypeBadge = mime.includes('pdf')
+              ? 'PDF'
+              : mime.includes('sheet') || mime.includes('excel') || mime.includes('xlsx')
+                ? 'XLSX'
+                : mime.includes('word') || mime.includes('docx')
+                  ? 'DOCX'
+                  : 'TỆP'
+
             return (
-              <li key={doc.id}>
-                <div
-                  className="tender-list-card catalog-list-card"
-                  style={{
-                    padding: '1.1rem 1.35rem',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '1.1rem',
-                  }}
-                >
-                  {/* Left file icon */}
-                  <div
-                    style={{
-                      width: '42px',
-                      height: '42px',
-                      borderRadius: '10px',
-                      background: isClean
-                        ? 'rgba(42, 157, 143, 0.12)'
-                        : isQuarantined
-                          ? 'rgba(239, 68, 68, 0.12)'
-                          : 'rgba(255, 255, 255, 0.05)',
-                      border: `1px solid ${
-                        isClean
-                          ? 'rgba(42, 157, 143, 0.3)'
-                          : isQuarantined
-                            ? 'rgba(239, 68, 68, 0.3)'
-                            : 'rgba(255, 255, 255, 0.1)'
-                      }`,
-                      display: 'flex',
-                      flexDirection: 'column',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      flexShrink: 0,
-                      color: isClean ? 'var(--accent, #2a9d8f)' : isQuarantined ? '#ef4444' : 'var(--muted)',
-                    }}
-                  >
-                    <span style={{ fontSize: '10px', fontWeight: 800 }}>
-                      {latest?.mimeType?.includes('pdf')
-                        ? 'PDF'
-                        : latest?.mimeType?.includes('sheet')
-                          ? 'XLS'
-                          : 'DOC'}
-                    </span>
-                    <span style={{ fontSize: '11px', marginTop: '-2px' }}>▤</span>
+              <li key={doc.id} style={{ listStyle: 'none' }}>
+                <div className={`doc-vault-card${isQuarantined ? ' is-quarantined' : ''}`}>
+                  {/* Left: File icon with status indicator pip */}
+                  <div className={`doc-vault-icon-box${isClean ? ' is-clean' : isQuarantined ? ' is-quarantined' : ''}`}>
+                    <span>{fileTypeBadge}</span>
+                    <span
+                      className={`doc-vault-pip ${isClean ? 'is-clean' : isQuarantined ? 'is-quarantined' : 'is-pending'}`}
+                      title={isClean ? 'Tệp sạch đã xác minh' : isQuarantined ? 'Đã cách ly mã độc' : 'Chưa hoàn tất'}
+                    />
                   </div>
 
-                  {/* Main content */}
-                  <div className="tender-list-card-main" style={{ flex: 1, minWidth: 0 }}>
-                    <div
-                      className="catalog-card-badges"
-                      style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '6px', marginBottom: '0.4rem' }}
-                    >
-                      {/* Document Type Badge */}
-                      <span className="tender-lot-code">
-                        {docTypeShortBadges[doc.documentType] ?? doc.documentType}
-                      </span>
+                  {/* Main: Title & Structured Details */}
+                  <div className="doc-vault-main">
+                    {/* Top Row: Title + Badges */}
+                    <div className="doc-vault-top-row">
+                      <div className="doc-vault-heading-group">
+                        <strong className="doc-vault-title">
+                          {doc.title}
+                        </strong>
 
-                      {/* Classification Badge */}
-                      <span
-                        className={
-                          doc.classification === 'RESTRICTED'
-                            ? 'catalog-status-pill is-superseded'
-                            : doc.classification === 'CONFIDENTIAL'
-                              ? 'catalog-status-pill is-draft'
-                              : 'catalog-status-pill is-published'
-                        }
-                      >
-                        {doc.classification}
-                      </span>
+                        {/* Doc Type Badge */}
+                        <span className="doc-type-badge">
+                          {docTypeShortBadges[doc.documentType] ?? doc.documentType}
+                        </span>
 
-                      {/* Security Scan Status */}
-                      {isClean ? (
+                        {/* Classification Badge */}
                         <span
-                          className="catalog-category-pill"
-                          style={{
-                            background: 'rgba(34, 197, 94, 0.12)',
-                            color: '#22c55e',
-                            border: '1px solid rgba(34, 197, 94, 0.25)',
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: '4px',
-                          }}
+                          className={`doc-class-badge ${
+                            doc.classification === 'RESTRICTED'
+                              ? 'restricted'
+                              : doc.classification === 'CONFIDENTIAL'
+                                ? 'confidential'
+                                : 'internal'
+                          }`}
                         >
-                          <span style={{ fontSize: '10px' }}>✓</span> SHA-256 Khớp · Sạch
+                          {doc.classification}
+                        </span>
+                      </div>
+
+                      {/* Security Status Pill */}
+                      {isClean ? (
+                        <span className="doc-status-pill is-clean">
+                          ✓ SHA-256 Hợp lệ · Sạch
                         </span>
                       ) : isQuarantined ? (
-                        <span
-                          className="catalog-conflict-badge"
-                          style={{
-                            background: 'rgba(239, 68, 68, 0.15)',
-                            color: '#ef4444',
-                            border: '1px solid rgba(239, 68, 68, 0.3)',
-                          }}
-                        >
-                          ⚠ Đã cách ly an toàn
+                        <span className="doc-status-pill is-quarantined">
+                          ⚠ Đã cách ly mã độc
                         </span>
                       ) : (
-                        <span
-                          className="catalog-status-pill is-draft"
-                          style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}
-                        >
+                        <span className="doc-status-pill is-pending">
                           ● Chưa hoàn tất tải lên
-                        </span>
-                      )}
-
-                      {/* Linked Context: Shows tender title or product name, NOT raw UUID */}
-                      {doc.tender && (
-                        <span className="tender-stage-badge" title={doc.tender.title}>
-                          Gói thầu: {doc.tender.reference ? `[${doc.tender.reference}] ` : ''}
-                          {doc.tender.title.length > 28 ? `${doc.tender.title.slice(0, 28)}…` : doc.tender.title}
-                        </span>
-                      )}
-                      {doc.product && (
-                        <span className="tender-stage-badge" title={doc.product.name}>
-                          Catalog: [{doc.product.sku}] {doc.product.name.length > 24 ? `${doc.product.name.slice(0, 24)}…` : doc.product.name}
                         </span>
                       )}
                     </div>
 
-                    <strong style={{ fontSize: '1rem', lineHeight: 1.4, color: 'var(--text-primary, #fff)' }}>
-                      {doc.title}
-                    </strong>
+                    {/* Middle Row: Linked Context (Tender or Product) */}
+                    {(doc.tender || doc.product) && (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+                        {doc.tender && (
+                          <span className="doc-linked-tag tender">
+                            📁 Gói thầu: {doc.tender.reference ? `[${doc.tender.reference}] ` : ''}
+                            {doc.tender.title}
+                          </span>
+                        )}
+                        {doc.product && (
+                          <span className="doc-linked-tag catalog">
+                            🏷️ Catalog: [{doc.product.sku}] {doc.product.name}
+                          </span>
+                        )}
+                      </div>
+                    )}
 
-                    <small
-                      className="tender-list-card-meta"
-                      style={{ marginTop: '0.25rem', color: 'var(--muted, #94a3b8)', fontSize: '0.785rem' }}
-                    >
-                      {latest ? (
-                        <>
-                          <span style={{ fontFamily: 'monospace', color: 'var(--foreground, #e2e8f0)' }}>
-                            {latest.originalFilename}
-                          </span>
-                          {' · '}
-                          <span>{formatBytes(latest.sizeBytes)}</span>
-                          {' · '}
-                          <span style={{ fontFamily: 'monospace' }} title={`SHA-256: ${latest.sha256}`}>
-                            SHA: {latest.sha256.slice(0, 14)}…
-                          </span>
-                          {' · '}
-                          <span>Phiên bản: {latest.versionLabel}</span>
-                          {' · '}
-                          <span>{new Date(doc.createdAt).toLocaleDateString('vi-VN')}</span>
-                        </>
-                      ) : (
-                        `Tạo lúc: ${new Date(doc.createdAt).toLocaleDateString('vi-VN')}`
-                      )}
-                    </small>
+                    {/* Bottom Row: File Technical Metadata */}
+                    {latest && (
+                      <div className="doc-meta-row">
+                        <span className="doc-filename-badge">
+                          {latest.originalFilename}
+                        </span>
+                        <span>{formatBytes(latest.sizeBytes)}</span>
+                        <span className="doc-hash-badge" title={`SHA-256: ${latest.sha256}`}>
+                          SHA: {latest.sha256.slice(0, 12)}…{latest.sha256.slice(-6)}
+                        </span>
+                        <span>Phiên bản: {latest.versionLabel}</span>
+                        <span>Tải lên: {new Date(doc.createdAt).toLocaleDateString('vi-VN')}</span>
+                      </div>
+                    )}
                   </div>
 
-                  {/* Actions column */}
-                  <div
-                    className="tender-list-card-counts"
-                    style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', flexShrink: 0 }}
-                  >
+                  {/* Right Actions */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', flexShrink: 0 }}>
                     {isClean && latest ? (
                       <button
                         type="button"
@@ -678,6 +543,7 @@ export function DocumentsManagementView({ slug }: { slug: string }) {
                           display: 'inline-flex',
                           alignItems: 'center',
                           gap: '6px',
+                          fontWeight: 600,
                         }}
                         onClick={() => handleDownload(doc.id, latest.id, latest.originalFilename)}
                       >
@@ -696,20 +562,15 @@ export function DocumentsManagementView({ slug }: { slug: string }) {
                           <polyline points="7 10 12 15 17 10" />
                           <line x1="12" y1="15" x2="12" y2="3" />
                         </svg>
-                        Tải an toàn (1 lần)
+                        Tải xuống
                       </button>
                     ) : isQuarantined ? (
-                      <span
-                        style={{
-                          fontSize: '12px',
-                          color: '#ef4444',
-                          fontWeight: 600,
-                          padding: '4px 8px',
-                          borderRadius: '6px',
-                          background: 'rgba(239, 68, 68, 0.1)',
-                        }}
-                      >
-                        Khóa tải (Cách ly)
+                      <span className="doc-quarantined-alert-pill">
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+                          <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                        </svg>
+                        Đã khóa tải
                       </span>
                     ) : (
                       <span className="muted" style={{ fontSize: '12px' }}>
@@ -717,12 +578,16 @@ export function DocumentsManagementView({ slug }: { slug: string }) {
                       </span>
                     )}
 
-                    {/* Delete action button */}
                     {canUpload && (
                       <button
                         type="button"
                         className="tender-icon-button"
-                        style={{ width: '30px', height: '30px', opacity: 0.7 }}
+                        style={{
+                          width: '32px',
+                          height: '32px',
+                          borderRadius: '8px',
+                          opacity: 0.8,
+                        }}
                         onClick={() => handleDelete(doc)}
                         title="Xóa tài liệu khỏi kho"
                         aria-label="Xóa tài liệu"
@@ -799,14 +664,14 @@ export function DocumentsManagementView({ slug }: { slug: string }) {
                 ⚠
               </div>
               <div>
-                <h3 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 700 }}>Xác nhận xóa tài liệu</h3>
-                <p style={{ margin: '0.15rem 0 0', fontSize: '0.785rem', color: 'var(--muted, #94a3b8)' }}>
+                <h3 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 700, color: 'var(--heading)' }}>Xác nhận xóa tài liệu</h3>
+                <p style={{ margin: '0.15rem 0 0', fontSize: '0.785rem', color: 'var(--muted)' }}>
                   Hành động bảo mật không thể hoàn tác
                 </p>
               </div>
             </div>
 
-            <p style={{ fontSize: '0.9rem', lineHeight: 1.5, color: 'var(--foreground, #e2e8f0)', margin: '0 0 1rem' }}>
+            <p style={{ fontSize: '0.9rem', lineHeight: 1.5, color: 'var(--ink)', margin: '0 0 1rem' }}>
               Bạn có chắc chắn muốn xóa vĩnh viễn tài liệu <strong>&ldquo;{docToDelete.title}&rdquo;</strong> khỏi kho lưu trữ an toàn của tổ chức?
             </p>
 
@@ -881,7 +746,7 @@ export function DocumentsManagementView({ slug }: { slug: string }) {
           slug={slug}
           onSuccess={() => {
             setShowUploadModal(false)
-            void loadData()
+            void loadData(true)
           }}
           onClose={() => setShowUploadModal(false)}
         />

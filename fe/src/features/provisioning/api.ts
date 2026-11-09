@@ -8,6 +8,7 @@ export interface OrganizationApplicationInput {
   contactName: string
   contactEmail: string
   contactPhone: string
+  turnstileToken?: string
 }
 
 export interface OrganizationApplication extends OrganizationApplicationInput {

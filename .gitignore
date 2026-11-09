@@ -20,3 +20,4 @@ be/api/src/database/generated/
 .node-version
 docs/
 test_files/
+scripts/

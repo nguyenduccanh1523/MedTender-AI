@@ -33,11 +33,15 @@ import {
   UploadIntentResponseDto,
 } from './documents.dto'
 import { DocumentsService } from './documents.service'
+import { TurnstileService } from '../../integrations/turnstile/turnstile.service'
 
 @ApiTags('documents')
 @Controller('api/v1/organizations/:slug/documents')
 export class DocumentsController {
-  constructor(private readonly documents: DocumentsService) {}
+  constructor(
+    private readonly documents: DocumentsService,
+    private readonly turnstile: TurnstileService,
+  ) {}
 
   @Get('policy-consent')
   @ApiCookieAuth(accessCookie)
@@ -67,11 +71,13 @@ export class DocumentsController {
   @ApiCookieAuth(accessCookie)
   @UseGuards(SessionGuard, WebMutationGuard)
   @ApiOkResponse({ type: UploadIntentResponseDto })
-  createUploadIntent(
+  async createUploadIntent(
     @Req() req: IdentityRequest,
     @Param('slug') slug: string,
     @Body() body: RequestUploadIntentDto,
+    @Ip() clientIp: string,
   ): Promise<UploadIntentResponseDto> {
+    await this.turnstile.verifyToken(body.turnstileToken, clientIp)
     return this.documents.createUploadIntent(req.identity.id, slug, body)
   }
 
@@ -225,5 +231,17 @@ export class DocumentsController {
     @Body('reason') reason: string,
   ) {
     return this.documents.purgeSecurityIncident(req.identity.id, slug, incidentId, reason)
+  }
+
+  @Post('governance/security-incidents/:incidentId/suspend-uploader')
+  @ApiCookieAuth(accessCookie)
+  @UseGuards(SessionGuard, WebMutationGuard)
+  suspendIncidentUploader(
+    @Req() req: IdentityRequest,
+    @Param('slug') slug: string,
+    @Param('incidentId', new ParseUUIDPipe()) incidentId: string,
+    @Body('reason') reason?: string,
+  ) {
+    return this.documents.suspendIncidentUploader(req.identity.id, slug, incidentId, reason)
   }
 }

@@ -16,21 +16,24 @@ const links = [
   { href: '/tai-lieu', label: 'Tài liệu' },
 ]
 
+let inMemoryCachedUser: PublicUser | undefined | null = null
+
+function getInitialUser(): PublicUser | undefined {
+  if (typeof window === 'undefined') return undefined
+  if (inMemoryCachedUser !== null) return inMemoryCachedUser || undefined
+  const cached = readCachedUser()
+  inMemoryCachedUser = cached || undefined
+  return cached || undefined
+}
+
 export function MarketingHeader() {
   const pathname = usePathname()
-  const [sessionUser, setSessionUser] = useState<PublicUser | undefined>(undefined)
+  const [sessionUser, setSessionUser] = useState<PublicUser | undefined>(getInitialUser)
 
   useEffect(() => {
-    let active = true
-    Promise.resolve().then(() => {
-      const cached = readCachedUser()
-      if (active && cached) {
-        setSessionUser(cached)
-      }
-    })
-    return () => {
-      active = false
-    }
+    const cached = readCachedUser()
+    inMemoryCachedUser = cached || undefined
+    setSessionUser(cached || undefined)
   }, [])
 
   return (

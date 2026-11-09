@@ -1,11 +1,12 @@
 import type { IncomingMessage, ServerResponse } from 'node:http'
-import { Body, Controller, Get, Header, HttpCode, Patch, Post, Req, Res, UseGuards } from '@nestjs/common'
+import { Body, Controller, Get, Header, HttpCode, Ip, Patch, Post, Req, Res, UseGuards } from '@nestjs/common'
 import { ApiCookieAuth, ApiCreatedResponse, ApiNoContentResponse, ApiOkResponse, ApiTags } from '@nestjs/swagger'
 
 import { AuthRateGuard } from './guards/auth-rate.guard'
 import { accessCookie, readSessionCookie, refreshCookie, setSessionCookies } from './session-cookies'
 import { SessionGuard, type IdentityRequest } from './guards/session.guard'
 import { WebMutationGuard } from '../../../../common/http/web-mutation.guard'
+import { TurnstileService } from '../../../../integrations/turnstile/turnstile.service'
 import {
   activationInput,
   ActivateAccountDto,
@@ -24,13 +25,21 @@ import { IdentityService } from '../../application/identity.service'
 @ApiTags('identity')
 @Controller('api/v1/auth')
 export class IdentityController {
-  constructor(private readonly identity: IdentityService) {}
+  constructor(
+    private readonly identity: IdentityService,
+    private readonly turnstile: TurnstileService,
+  ) {}
 
   @Post('register')
   @UseGuards(WebMutationGuard, AuthRateGuard)
   @Header('Cache-Control', 'no-store')
   @ApiCreatedResponse({ type: PublicUser })
-  async register(@Body() body: RegisterDto, @Res({ passthrough: true }) res: ServerResponse) {
+  async register(
+    @Body() body: RegisterDto,
+    @Ip() clientIp: string,
+    @Res({ passthrough: true }) res: ServerResponse,
+  ) {
+    await this.turnstile.verifyToken(body.turnstileToken, clientIp)
     const { user, tokens } = await this.identity.register(registerInput(body))
     setSessionCookies(res, tokens)
     return user
@@ -41,7 +50,12 @@ export class IdentityController {
   @UseGuards(WebMutationGuard, AuthRateGuard)
   @Header('Cache-Control', 'no-store')
   @ApiOkResponse({ type: PublicUser })
-  async login(@Body() body: LoginDto, @Res({ passthrough: true }) res: ServerResponse) {
+  async login(
+    @Body() body: LoginDto,
+    @Ip() clientIp: string,
+    @Res({ passthrough: true }) res: ServerResponse,
+  ) {
+    await this.turnstile.verifyToken(body.turnstileToken, clientIp)
     const { user, tokens } = await this.identity.login(loginInput(body))
     setSessionCookies(res, tokens)
     return user

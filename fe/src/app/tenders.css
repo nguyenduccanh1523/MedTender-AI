@@ -1747,6 +1747,136 @@
   background: var(--surface-muted);
 }
 
+/* Security Quarantine Ledger Table */
+.governance-table.quarantine-table {
+  width: 100%;
+  min-width: 890px;
+  table-layout: auto;
+}
+
+.governance-table.quarantine-table th,
+.governance-table.quarantine-table td {
+  padding: 0.75rem 0.85rem;
+  vertical-align: middle;
+}
+
+.quarantine-actions-wrap {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.4rem;
+  white-space: nowrap;
+}
+
+.quarantine-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.32rem 0.65rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  border-radius: 6px;
+  white-space: nowrap;
+  cursor: pointer;
+  line-height: 1.25;
+  transition: all 0.15s ease-in-out;
+  border: 1px solid transparent;
+}
+
+.quarantine-btn-suspend {
+  background: rgba(239, 68, 68, 0.1);
+  border-color: rgba(239, 68, 68, 0.35);
+  color: #ef4444;
+}
+
+.quarantine-btn-suspend:hover {
+  background: rgba(239, 68, 68, 0.2);
+  border-color: rgba(239, 68, 68, 0.6);
+  color: #dc2626;
+  transform: translateY(-1px);
+}
+
+:root[data-theme='dark'] .quarantine-btn-suspend {
+  background: rgba(239, 68, 68, 0.15);
+  border-color: rgba(248, 113, 113, 0.4);
+  color: #f87171;
+}
+
+:root[data-theme='dark'] .quarantine-btn-suspend:hover {
+  background: rgba(239, 68, 68, 0.28);
+  color: #fca5a5;
+}
+
+.quarantine-btn-purge {
+  background: #dc2626;
+  border-color: #b91c1c;
+  color: #ffffff;
+  box-shadow: 0 1px 3px rgba(220, 38, 38, 0.25);
+}
+
+.quarantine-btn-purge:hover {
+  background: #b91c1c;
+  border-color: #991b1b;
+  transform: translateY(-1px);
+  box-shadow: 0 3px 8px rgba(220, 38, 38, 0.4);
+}
+
+.quarantine-badge-suspended {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.35rem 0.75rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #ef4444;
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  border-radius: 7px;
+  white-space: nowrap;
+}
+
+:root[data-theme='dark'] .quarantine-badge-suspended {
+  color: #f87171;
+  background: rgba(239, 68, 68, 0.16);
+  border-color: rgba(248, 113, 113, 0.35);
+}
+
+.quarantine-reason-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 2px 8px;
+  border-radius: 4px;
+  background: rgba(239, 68, 68, 0.12);
+  border: 1px solid rgba(239, 68, 68, 0.25);
+  color: #ef4444;
+  font-size: 0.72rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-bottom: 0.3rem;
+}
+
+:root[data-theme='dark'] .quarantine-reason-pill {
+  background: rgba(239, 68, 68, 0.18);
+  border-color: rgba(248, 113, 113, 0.35);
+  color: #f87171;
+}
+
+.quarantine-sha-code {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 8px;
+  border-radius: 6px;
+  background: var(--surface-muted);
+  border: 1px solid var(--line);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.75rem;
+  color: var(--ink);
+  white-space: nowrap;
+}
+
 .governance-role-select {
   min-height: 34px;
   padding: .3rem .65rem;
@@ -1865,12 +1995,13 @@
   display: inline-flex;
   align-items: center;
   gap: .45rem;
-  padding: .28rem .8rem;
+  padding: .32rem .85rem;
   border-radius: 999px;
-  font-size: .73rem;
-  font-weight: 820;
+  font-size: .74rem;
+  font-weight: 800;
   letter-spacing: .04em;
   text-transform: uppercase;
+  white-space: nowrap;
 }
 
 .governance-org-status-badge.is-active {
@@ -1884,6 +2015,31 @@
   background: rgba(16, 185, 129, 0.18);
   border-color: rgba(52, 211, 153, 0.5);
   color: #34d399;
+}
+
+.governance-org-status-badge.is-danger {
+  background: rgba(239, 68, 68, 0.12);
+  border: 1px solid rgba(239, 68, 68, 0.45);
+  color: #ef4444;
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.08);
+}
+
+:root[data-theme='dark'] .governance-org-status-badge.is-danger {
+  background: rgba(239, 68, 68, 0.18);
+  border-color: rgba(248, 113, 113, 0.5);
+  color: #f87171;
+}
+
+.governance-org-status-badge.is-purged {
+  background: rgba(100, 116, 139, 0.12);
+  border: 1px solid rgba(100, 116, 139, 0.35);
+  color: #64748b;
+}
+
+:root[data-theme='dark'] .governance-org-status-badge.is-purged {
+  background: rgba(148, 163, 184, 0.12);
+  border-color: rgba(148, 163, 184, 0.3);
+  color: #94a3b8;
 }
 
 .governance-org-status-badge i {
@@ -2689,4 +2845,343 @@
     margin-block: 3rem;
     padding-block: 3rem;
   }
+}
+
+/* ==========================================================================
+   Document Vault Cards — Dual Theme (Light & Dark Mode)
+   ========================================================================== */
+
+.doc-vault-card {
+  display: flex;
+  align-items: center;
+  gap: 1.15rem;
+  padding: 1.15rem 1.35rem;
+  border-radius: 14px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  box-shadow: 0 1px 3px 0 rgba(15, 23, 42, 0.05), 0 1px 2px -1px rgba(15, 23, 42, 0.04);
+  transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+  position: relative;
+}
+
+.doc-vault-card:hover {
+  border-color: var(--field-line);
+  box-shadow: 0 4px 14px 0 rgba(15, 23, 42, 0.08);
+  transform: translateY(-1px);
+}
+
+.doc-vault-card.is-quarantined {
+  background: var(--danger-soft);
+  border-color: var(--danger-line);
+}
+
+.doc-vault-card.is-quarantined:hover {
+  border-color: #ef4444;
+}
+
+.doc-vault-icon-box {
+  width: 46px;
+  height: 46px;
+  border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  position: relative;
+  background: var(--surface-muted);
+  border: 1px solid var(--line);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  color: var(--ink);
+}
+
+.doc-vault-icon-box.is-clean {
+  background: rgba(16, 185, 129, 0.1);
+  border-color: rgba(16, 185, 129, 0.25);
+  color: #10b981;
+}
+
+.doc-vault-icon-box.is-quarantined {
+  background: rgba(239, 68, 68, 0.1);
+  border-color: rgba(239, 68, 68, 0.25);
+  color: #ef4444;
+}
+
+.doc-vault-pip {
+  position: absolute;
+  top: -3px;
+  right: -3px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  border: 2px solid var(--surface);
+}
+
+.doc-vault-pip.is-clean {
+  background: #10b981;
+}
+
+.doc-vault-pip.is-quarantined {
+  background: #ef4444;
+}
+
+.doc-vault-pip.is-pending {
+  background: #f59e0b;
+}
+
+.doc-vault-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.doc-vault-top-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.doc-vault-heading-group {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+}
+
+.doc-vault-title {
+  font-size: 1.02rem;
+  font-weight: 700;
+  color: var(--heading);
+  letter-spacing: -0.015em;
+  line-height: 1.3;
+}
+
+.doc-type-badge {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 6px;
+  background: var(--surface-muted);
+  color: var(--ink);
+  border: 1px solid var(--line);
+  letter-spacing: 0.02em;
+}
+
+.doc-class-badge {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 6px;
+  letter-spacing: 0.02em;
+}
+
+.doc-class-badge.internal {
+  background: #eff6ff;
+  color: #1d4ed8;
+  border: 1px solid #bfdbfe;
+}
+
+.doc-class-badge.confidential {
+  background: #fffbeb;
+  color: #b45309;
+  border: 1px solid #fde68a;
+}
+
+.doc-class-badge.restricted {
+  background: #fef2f2;
+  color: #dc2626;
+  border: 1px solid #fecaca;
+  box-shadow: 0 0 0 1px rgba(220, 38, 38, 0.1);
+}
+
+[data-theme='dark'] .doc-class-badge.internal {
+  background: rgba(59, 130, 246, 0.15);
+  color: #93c5fd;
+  border-color: rgba(59, 130, 246, 0.3);
+}
+
+[data-theme='dark'] .doc-class-badge.confidential {
+  background: rgba(245, 158, 11, 0.15);
+  color: #fcd34d;
+  border-color: rgba(245, 158, 11, 0.3);
+}
+
+[data-theme='dark'] .doc-class-badge.restricted {
+  background: rgba(239, 68, 68, 0.18);
+  color: #f87171;
+  border-color: rgba(239, 68, 68, 0.38);
+  box-shadow: 0 0 0 1px rgba(239, 68, 68, 0.15);
+}
+
+.doc-status-pill {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 3px 10px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.doc-status-pill.is-clean {
+  background: #f0fdf4;
+  color: #15803d;
+  border: 1px solid #bbf7d0;
+}
+
+.doc-status-pill.is-quarantined {
+  background: #fef2f2;
+  color: #b91c1c;
+  border: 1px solid #fecaca;
+}
+
+.doc-status-pill.is-pending {
+  background: #fffbeb;
+  color: #b45309;
+  border: 1px solid #fde68a;
+}
+
+[data-theme='dark'] .doc-status-pill.is-clean {
+  background: rgba(34, 197, 94, 0.12);
+  color: #4ade80;
+  border-color: rgba(34, 197, 94, 0.28);
+}
+
+[data-theme='dark'] .doc-status-pill.is-quarantined {
+  background: rgba(239, 68, 68, 0.12);
+  color: #f87171;
+  border-color: rgba(239, 68, 68, 0.3);
+}
+
+[data-theme='dark'] .doc-status-pill.is-pending {
+  background: rgba(245, 158, 11, 0.12);
+  color: #fbbf24;
+  border-color: rgba(245, 158, 11, 0.28);
+}
+
+.doc-linked-tag {
+  font-size: 11px;
+  padding: 2.5px 8px;
+  border-radius: 6px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-weight: 550;
+  max-width: 100%;
+}
+
+.doc-linked-tag.tender {
+  background: #f0fdf4;
+  color: #166534;
+  border: 1px solid #bbf7d0;
+}
+
+.doc-linked-tag.catalog {
+  background: #eff6ff;
+  color: #1e40af;
+  border: 1px solid #bfdbfe;
+}
+
+[data-theme='dark'] .doc-linked-tag.tender {
+  background: rgba(34, 197, 94, 0.1);
+  color: #4ade80;
+  border-color: rgba(34, 197, 94, 0.25);
+}
+
+[data-theme='dark'] .doc-linked-tag.catalog {
+  background: rgba(59, 130, 246, 0.1);
+  color: #60a5fa;
+  border-color: rgba(59, 130, 246, 0.25);
+}
+
+.doc-meta-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  font-size: 0.785rem;
+  color: var(--muted);
+}
+
+.doc-filename-badge {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--ink);
+  background: var(--surface-muted);
+  border: 1px solid var(--line);
+  padding: 2px 7px;
+  border-radius: 5px;
+  max-width: 380px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.doc-hash-badge {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 0.76rem;
+  color: var(--muted);
+}
+
+.doc-quarantined-alert-pill {
+  font-size: 12px;
+  font-weight: 600;
+  padding: 6px 12px;
+  border-radius: 8px;
+  background: #fef2f2;
+  color: #b91c1c;
+  border: 1px solid #fecaca;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+[data-theme='dark'] .doc-quarantined-alert-pill {
+  background: rgba(239, 68, 68, 0.12);
+  color: #f87171;
+  border-color: rgba(239, 68, 68, 0.28);
+}
+
+/* Informative Viewer Mode Banner */
+.viewer-role-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.85rem;
+  padding: 0.85rem 1.15rem;
+  margin-bottom: 1.25rem;
+  border-radius: 10px;
+  background: rgba(59, 130, 246, 0.08);
+  border: 1px solid rgba(59, 130, 246, 0.25);
+  color: var(--ink);
+}
+
+.viewer-role-banner-icon {
+  font-size: 20px;
+  line-height: 1.2;
+}
+
+.viewer-role-banner-content strong {
+  display: block;
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: #2563eb;
+  margin-bottom: 0.25rem;
+}
+
+[data-theme='dark'] .viewer-role-banner-content strong {
+  color: #60a5fa;
+}
+
+.viewer-role-banner-content p {
+  margin: 0;
+  font-size: 0.81rem;
+  line-height: 1.5;
+  color: var(--muted);
 }

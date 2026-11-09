@@ -34,6 +34,8 @@ const uploadRoles = new Set<MembershipRole>(['OWNER', 'ADMIN', 'BID_MANAGER', 'C
 
 @Injectable()
 export class DocumentsService {
+  private readonly queryCache = new Map<string, { data: any; expiresAt: number }>()
+
   constructor(
     private readonly database: DatabaseService,
     private readonly organizations: OrganizationsService,
@@ -41,12 +43,38 @@ export class DocumentsService {
     private readonly aiPolicies: AiPoliciesService,
   ) {}
 
+  private getCached<T>(key: string): T | undefined {
+    const entry = this.queryCache.get(key)
+    if (!entry) return undefined
+    if (entry.expiresAt <= Date.now()) {
+      this.queryCache.delete(key)
+      return undefined
+    }
+    return entry.data as T
+  }
+
+  private setCached<T>(key: string, data: T, ttlMs = 20_000): void {
+    this.queryCache.set(key, { data, expiresAt: Date.now() + ttlMs })
+  }
+
+  private invalidateOrgCache(organizationId: string): void {
+    for (const key of this.queryCache.keys()) {
+      if (key.includes(organizationId)) {
+        this.queryCache.delete(key)
+      }
+    }
+  }
+
   private hashToken(token: string): string {
     return crypto.createHash('sha256').update(token).digest('hex')
   }
 
   async getPolicyConsentStatus(userId: string, slug: string): Promise<PolicyConsentStatusDto> {
     return this.organizations.withWorkspace(userId, slug, async (tx, organizationId) => {
+      const cacheKey = `consent:${organizationId}:${userId}`
+      const cached = this.getCached<PolicyConsentStatusDto>(cacheKey)
+      if (cached) return cached
+
       const consent = await tx.userPolicyConsent.findUnique({
         where: {
           organizationId_userId_policyVersion: {
@@ -57,7 +85,7 @@ export class DocumentsService {
         },
       })
 
-      return {
+      const result: PolicyConsentStatusDto = {
         hasConsented: Boolean(consent && consent.termsAccepted && consent.privacyAccepted),
         currentPolicyVersion: LEGAL_NOTICES.CURRENT_POLICY_VERSION,
         acceptedAt: consent ? consent.acceptedAt : null,
@@ -68,6 +96,8 @@ export class DocumentsService {
         aiNoticeTitle: LEGAL_NOTICES.AI_NOTICE_TITLE,
         aiNoticeSummary: LEGAL_NOTICES.AI_NOTICE_SUMMARY,
       }
+      this.setCached(cacheKey, result, 60_000)
+      return result
     })
   }
 
@@ -116,6 +146,7 @@ export class DocumentsService {
         },
       })
 
+      this.invalidateOrgCache(organizationId)
       return this.getPolicyConsentStatus(userId, slug)
     })
   }
@@ -425,6 +456,34 @@ export class DocumentsService {
         })
 
         const incidentRef = `INC-${Date.now().toString().slice(-4)}`
+
+        // Biện pháp 1: Tự động phong tỏa quyền Tải lên nếu là thành viên (không phải OWNER)
+        let autoAction = 'NONE'
+        if (role !== 'OWNER') {
+          await tx.organizationMembership.updateMany({
+            where: { organizationId, userId },
+            data: { role: 'VIEWER' },
+          })
+          autoAction = 'UPLOAD_RESTRICTED_DEMOTED_TO_VIEWER'
+
+          await tx.tenderAuditLog.create({
+            data: {
+              organizationId,
+              actorUserId: userId,
+              actorRole: role,
+              action: 'SECURITY_AUTO_RESTRICTION',
+              summary: `HỆ THỐNG TỰ ĐỘNG PHONG TỎA: Đã tước quyền upload của thành viên (${role} → VIEWER) do phát hiện tải tệp mã độc "${asset.originalFilename}"`,
+              details: {
+                incidentReference: incidentRef,
+                userId,
+                previousRole: role,
+                newRole: 'VIEWER',
+                reason: quarantineReason,
+              },
+            },
+          })
+        }
+
         await tx.securityIncident.create({
           data: {
             organizationId,
@@ -436,6 +495,11 @@ export class DocumentsService {
             status: 'OPEN',
             ipAddress: clientIp ?? '127.0.0.1',
             uploadedByUserId: userId,
+            details: {
+              autoAction,
+              previousRole: role,
+              uploaderSuspended: false,
+            },
           },
         })
 
@@ -451,9 +515,56 @@ export class DocumentsService {
               fileAssetId: asset.id,
               reason: quarantineReason,
               sha256: asset.sha256,
+              autoAction,
             },
           },
         })
+
+        const quarantinedVersionSummary = {
+          id: docVersion.id,
+          versionNumber: docVersion.versionNumber,
+          versionLabel: docVersion.versionLabel,
+          status: docVersion.status,
+          originalFilename: asset.originalFilename,
+          sizeBytes: Number(asset.sizeBytes),
+          mimeType: asset.mimeType,
+          sha256: asset.sha256,
+          scanStatus: FileScanStatus.QUARANTINED,
+          quarantineReason,
+          rightsConfirmed: docVersion.rightsConfirmed,
+          rightsConfirmedAt: docVersion.rightsConfirmedAt,
+          acceptedPolicyVersion: docVersion.acceptedTermsVersion,
+          notes: docVersion.notes,
+          createdAt: docVersion.createdAt,
+          updatedAt: new Date(),
+        }
+
+        this.invalidateOrgCache(organizationId)
+
+        return {
+          id: docVersion.document.id,
+          organizationId: docVersion.document.organizationId,
+          title: docVersion.document.title,
+          documentType: docVersion.document.documentType,
+          classification: docVersion.document.classification,
+          description: docVersion.document.description,
+          tenderId: docVersion.document.tenderId,
+          productId: docVersion.document.productId,
+          tender: null,
+          product: null,
+          createdAt: docVersion.document.createdAt,
+          updatedAt: new Date(),
+          versionCount: 1,
+          latestVersion: quarantinedVersionSummary,
+          versions: [quarantinedVersionSummary],
+          securityIncidentNotice: {
+            incidentReference: incidentRef,
+            reason: quarantineReason,
+            isQuarantined: true,
+            autoDemotedToViewer: role !== 'OWNER',
+            newRole: role !== 'OWNER' ? 'VIEWER' : role,
+          },
+        }
       } else {
         // FILE IS CLEAN
         await tx.fileAsset.update({
@@ -480,9 +591,10 @@ export class DocumentsService {
             },
           },
         })
-      }
 
-      return this.getDocumentDetail(userId, slug, documentId)
+        this.invalidateOrgCache(organizationId)
+        return this.getDocumentDetail(userId, slug, documentId)
+      }
     })
   }
 
@@ -492,6 +604,10 @@ export class DocumentsService {
     options?: { tenderId?: string; productId?: string },
   ): Promise<DocumentDetailDto[]> {
     return this.organizations.withWorkspace(userId, slug, async (tx, organizationId, role) => {
+      const cacheKey = `docs:${organizationId}:${role}:${options?.tenderId || ''}:${options?.productId || ''}`
+      const cached = this.getCached<DocumentDetailDto[]>(cacheKey)
+      if (cached) return cached
+
       const isViewer = role === 'VIEWER'
 
       const where: Prisma.DocumentWhereInput = { organizationId }
@@ -514,7 +630,7 @@ export class DocumentsService {
         orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
       })
 
-      return docs
+      const finalDocs = docs
         .map((doc) => {
           const visibleVersions = isViewer
             ? doc.versions.filter(
@@ -565,6 +681,9 @@ export class DocumentsService {
           return result
         })
         .filter((d): d is DocumentDetailDto => d !== null)
+
+      this.setCached(cacheKey, finalDocs, 20_000)
+      return finalDocs
     })
   }
 
@@ -683,6 +802,7 @@ export class DocumentsService {
         },
       })
 
+      this.invalidateOrgCache(organizationId)
       return { success: true }
     })
   }
@@ -812,21 +932,100 @@ export class DocumentsService {
         orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
       })
 
-      return incidents.map((inc) => ({
-        id: inc.id,
-        reference: inc.reference,
-        fileName: inc.fileName,
-        sha256: inc.sha256,
-        reason: inc.reason,
-        status: inc.status,
-        ipAddress: inc.ipAddress,
-        uploadedByUserName: inc.uploadedBy.displayName,
-        uploadedAt: inc.createdAt,
-        resolvedByUserName: inc.resolvedBy?.displayName ?? null,
-        resolvedAt: inc.resolvedAt,
-        purgedByUserName: inc.purgedBy?.displayName ?? null,
-        purgedAt: inc.purgedAt,
-      }))
+      return incidents.map((inc) => {
+        const detailsObj = (typeof inc.details === 'object' && inc.details !== null) ? (inc.details as Record<string, any>) : {}
+        return {
+          id: inc.id,
+          reference: inc.reference,
+          fileName: inc.fileName,
+          sha256: inc.sha256,
+          reason: inc.reason,
+          status: inc.status,
+          ipAddress: inc.ipAddress,
+          uploadedByUserName: inc.uploadedBy.displayName,
+          uploadedByUserId: inc.uploadedByUserId,
+          isUploaderSuspended: Boolean(detailsObj.uploaderSuspended),
+          uploadedAt: inc.createdAt,
+          resolvedByUserName: inc.resolvedBy?.displayName ?? null,
+          resolvedAt: inc.resolvedAt,
+          purgedByUserName: inc.purgedBy?.displayName ?? null,
+          purgedAt: inc.purgedAt,
+        }
+      })
+    })
+  }
+
+  async suspendIncidentUploader(
+    userId: string,
+    slug: string,
+    incidentId: string,
+    reason?: string,
+  ): Promise<{ success: boolean; message: string }> {
+    return this.organizations.withWorkspace(userId, slug, async (tx, organizationId, role) => {
+      if (role !== 'OWNER') {
+        throw new ForbiddenException('Chỉ OWNER mới có quyền đình chỉ tài khoản vi phạm.')
+      }
+
+      const incident = await tx.securityIncident.findFirst({
+        where: { id: incidentId, organizationId },
+        include: { uploadedBy: true },
+      })
+      if (!incident) throw new NotFoundException('Không tìm thấy sự cố bảo mật.')
+
+      if (incident.uploadedByUserId === userId) {
+        throw new BadRequestException('Không thể đình chỉ tài khoản của chính OWNER.')
+      }
+
+      // Biện pháp 2: Đình chỉ tư cách thành viên trong tổ chức
+      await tx.organizationMembership.updateMany({
+        where: { organizationId, userId: incident.uploadedByUserId },
+        data: { status: 'DISABLED' },
+      })
+
+      // Biện pháp 3: Thu hồi toàn bộ phiên đăng nhập còn hiệu lực của tài khoản vi phạm
+      await tx.authSession.updateMany({
+        where: { userId: incident.uploadedByUserId, revokedAt: null },
+        data: { revokedAt: new Date() },
+      })
+
+      const suspensionReason = reason?.trim() || `Đình chỉ do sự cố bảo mật nghiêm trọng ${incident.reference} (${incident.fileName})`
+
+      const detailsObj = (typeof incident.details === 'object' && incident.details !== null) ? (incident.details as Record<string, any>) : {}
+      await tx.securityIncident.update({
+        where: { id: incident.id },
+        data: {
+          details: {
+            ...detailsObj,
+            uploaderSuspended: true,
+            suspendedAt: new Date().toISOString(),
+            suspendedByUserId: userId,
+            suspensionReason,
+          },
+        },
+      })
+
+      await tx.tenderAuditLog.create({
+        data: {
+          organizationId,
+          actorUserId: userId,
+          actorRole: role,
+          action: 'MEMBER_SUSPENDED_FOR_MALWARE',
+          summary: `KHÓA TÀI KHOẢN: OWNER đã đình chỉ quyền truy cập và thu hồi mọi phiên đăng nhập của "${incident.uploadedBy.displayName}" (${incident.uploadedBy.email}) do tải tệp độc hại ${incident.reference}`,
+          details: {
+            incidentId,
+            incidentReference: incident.reference,
+            suspendedUserId: incident.uploadedByUserId,
+            suspendedUserEmail: incident.uploadedBy.email,
+            reason: suspensionReason,
+          },
+        },
+      })
+
+      this.invalidateOrgCache(organizationId)
+      return {
+        success: true,
+        message: `Đã khóa tài khoản "${incident.uploadedBy.displayName}" và thu hồi quyền truy cập tổ chức.`,
+      }
     })
   }
 
@@ -880,6 +1079,7 @@ export class DocumentsService {
         },
       })
 
+      this.invalidateOrgCache(organizationId)
       return { success: true }
     })
   }

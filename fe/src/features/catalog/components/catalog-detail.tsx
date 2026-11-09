@@ -19,6 +19,8 @@ import {
   type ProductSpecification,
   type ProductVersionDetail,
 } from '../api'
+import { getDocumentDownloadLink, listDocuments, type DocumentDetail } from '../../documents/api'
+import { UploadWizardModal } from '../../documents/components/upload-wizard-modal'
 
 const versionStatusMeta: Record<
   'DRAFT' | 'PUBLISHED' | 'SUPERSEDED',
@@ -129,6 +131,23 @@ export function CatalogDetailView({ slug, productId }: { slug: string; productId
 
   const [onlyConflicts, setOnlyConflicts] = useState(false)
 
+  // Step 05: Linked documents state
+  const [linkedDocs, setLinkedDocs] = useState<DocumentDetail[]>([])
+  const [docsLoading, setDocsLoading] = useState(false)
+  const [showUploadModal, setShowUploadModal] = useState(false)
+
+  const loadDocs = useCallback(async () => {
+    setDocsLoading(true)
+    try {
+      const docs = await listDocuments(slug, { productId })
+      setLinkedDocs(docs)
+    } catch {
+      setLinkedDocs([])
+    } finally {
+      setDocsLoading(false)
+    }
+  }, [slug, productId])
+
   const loadProduct = useCallback(
     async (preferredVersionId?: string) => {
       setLoading(true)
@@ -164,6 +183,7 @@ export function CatalogDetailView({ slug, productId }: { slug: string; productId
 
   useEffect(() => {
     let active = true
+    void loadDocs()
     getCatalogProduct(slug, productId)
       .then((detail) => {
         if (!active) return
@@ -1022,6 +1042,147 @@ export function CatalogDetailView({ slug, productId }: { slug: string; productId
             </div>
           )}
         </article>
+      )}
+
+      {/* Step 05: Linked Documents & Evidence Section */}
+      <section className="surface tender-list-panel" style={{ marginTop: '1.5rem' }} aria-label="Tài liệu và bằng chứng kỹ thuật">
+        <div className="tender-entry-heading">
+          <div>
+            <strong>Tài liệu & Brochure kỹ thuật đính kèm ({linkedDocs.length})</strong>
+            <p className="muted">
+              Catalogue, hướng dẫn sử dụng và chứng chỉ CFS/ISO liên kết trực tiếp với thiết bị này để phục vụ đối chiếu thông số.
+            </p>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+            <button
+              type="button"
+              className={docsLoading ? 'tender-icon-button is-spinning' : 'tender-icon-button'}
+              onClick={() => void loadDocs()}
+              disabled={docsLoading}
+              aria-label="Làm mới tài liệu"
+              title="Làm mới danh sách tài liệu"
+            >
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+                <path d="M3 3v5h5" />
+                <path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16" />
+                <path d="M16 16h5v5" />
+              </svg>
+            </button>
+            {canWrite && (
+              <button
+                className="button button-primary tender-add-lot-btn"
+                type="button"
+                onClick={() => setShowUploadModal(true)}
+              >
+                + Tải Brochure
+              </button>
+            )}
+          </div>
+        </div>
+
+        {docsLoading && linkedDocs.length === 0 ? (
+          <div className="tender-skeleton-list"><i /><i /></div>
+        ) : linkedDocs.length === 0 ? (
+          <div className="tender-empty-state" style={{ padding: '2rem 1rem', textAlign: 'center' }}>
+            <p className="muted" style={{ marginBottom: '0.75rem' }}>
+              Chưa có tài liệu hoặc Brochure nào được gắn với thiết bị này.
+            </p>
+            {canWrite && (
+              <button
+                type="button"
+                className="button button-secondary"
+                style={{ fontSize: '13px' }}
+                onClick={() => setShowUploadModal(true)}
+              >
+                + Tải Catalogue đầu tiên
+              </button>
+            )}
+          </div>
+        ) : (
+          <ul className="organization-list tender-cards-list" style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginTop: '1rem' }}>
+            {linkedDocs.map((doc) => {
+              const latest = doc.latestVersion
+              const isClean = latest?.scanStatus === 'CLEAN'
+              const isQuarantined = latest?.scanStatus === 'QUARANTINED'
+
+              return (
+                <li key={doc.id} style={{ listStyle: 'none' }}>
+                  <div className={`doc-vault-card${isQuarantined ? ' is-quarantined' : ''}`}>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '0.35rem', flexWrap: 'wrap' }}>
+                        <strong className="doc-vault-title" style={{ fontSize: '1rem' }}>{doc.title}</strong>
+                        <span
+                          className={`doc-class-badge ${
+                            doc.classification === 'CONFIDENTIAL' ? 'confidential' : 'internal'
+                          }`}
+                        >
+                          {doc.classification}
+                        </span>
+                        {isClean ? (
+                          <span className="doc-status-pill is-clean" style={{ fontSize: '10px', padding: '2px 8px' }}>
+                            ✓ SHA-256 Sạch
+                          </span>
+                        ) : isQuarantined ? (
+                          <span className="doc-status-pill is-quarantined" style={{ fontSize: '10px', padding: '2px 8px' }}>
+                            ⚠ Đã cách ly
+                          </span>
+                        ) : null}
+                      </div>
+                      {latest && (
+                        <div className="doc-meta-row">
+                          <span className="doc-filename-badge">{latest.originalFilename}</span>
+                          <span>{latest.versionLabel}</span>
+                          <span>{new Date(doc.createdAt).toLocaleDateString('vi-VN')}</span>
+                        </div>
+                      )}
+                    </div>
+
+                    {isClean && latest && (
+                      <button
+                        type="button"
+                        className="button button-secondary"
+                        style={{ fontSize: '12px', padding: '6px 14px', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+                        onClick={async () => {
+                          try {
+                            const link = await getDocumentDownloadLink(slug, doc.id, latest.id)
+                            const a = document.createElement('a')
+                            a.href = link.downloadUrl
+                            a.download = latest.originalFilename
+                            document.body.appendChild(a)
+                            a.click()
+                            document.body.removeChild(a)
+                          } catch {
+                            alert('Không thể tạo link tải xuống.')
+                          }
+                        }}
+                      >
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                          <polyline points="7 10 12 15 17 10" />
+                          <line x1="12" y1="15" x2="12" y2="3" />
+                        </svg>
+                        Tải xuống
+                      </button>
+                    )}
+                  </div>
+                </li>
+              )
+            })}
+          </ul>
+        )}
+      </section>
+
+      {showUploadModal && (
+        <UploadWizardModal
+          slug={slug}
+          defaultProductId={productId}
+          onSuccess={() => {
+            setShowUploadModal(false)
+            void loadDocs()
+          }}
+          onClose={() => setShowUploadModal(false)}
+        />
       )}
 
       <ConfirmDialog

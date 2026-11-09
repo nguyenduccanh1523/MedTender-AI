@@ -756,6 +756,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/organizations/{slug}/documents/governance/security-incidents/{incidentId}/suspend-uploader": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["DocumentsController_suspendIncidentUploader"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -771,6 +787,8 @@ export interface components {
             email: string;
             /** Format: password */
             password: string;
+            /** @description Cloudflare Turnstile anti-bot token */
+            turnstileToken?: string;
             name: string;
         };
         PublicUser: {
@@ -787,6 +805,8 @@ export interface components {
             email: string;
             /** Format: password */
             password: string;
+            /** @description Cloudflare Turnstile anti-bot token */
+            turnstileToken?: string;
         };
         ActivateAccountDto: {
             token: string;
@@ -942,6 +962,8 @@ export interface components {
             /** Format: email */
             contactEmail: string;
             contactPhone: string;
+            /** @description Cloudflare Turnstile token for anti-bot validation */
+            turnstileToken?: string;
         };
         OrganizationApplicationReceiptDto: {
             reference: string;
@@ -1208,6 +1230,8 @@ export interface components {
             productId?: string | null;
             documentId?: string | null;
             notes?: string | null;
+            /** @description Cloudflare Turnstile anti-bot token */
+            turnstileToken?: string;
         };
         UploadIntentResponseDto: {
             intentId: string;
@@ -1256,6 +1280,13 @@ export interface components {
             /** Format: date-time */
             updatedAt: string;
         };
+        SecurityIncidentNoticeDto: {
+            incidentReference: string;
+            reason: string;
+            isQuarantined: boolean;
+            autoDemotedToViewer: boolean;
+            newRole: string;
+        };
         DocumentDetailDto: {
             id: string;
             organizationId: string;
@@ -1276,6 +1307,7 @@ export interface components {
             versionCount: number;
             latestVersion: components["schemas"]["DocumentVersionSummaryDto"] | null;
             versions: components["schemas"]["DocumentVersionSummaryDto"][];
+            securityIncidentNotice?: components["schemas"]["SecurityIncidentNoticeDto"] | null;
         };
         DownloadLinkResponseDto: {
             downloadUrl: string;
@@ -1293,6 +1325,8 @@ export interface components {
             status: string;
             ipAddress: string | null;
             uploadedByUserName: string;
+            uploadedByUserId: string | null;
+            isUploaderSuspended?: boolean;
             /** Format: date-time */
             uploadedAt: string;
             resolvedByUserName: string | null;
@@ -2683,6 +2717,26 @@ export interface operations {
         };
     };
     DocumentsController_purgeIncident: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+                incidentId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    DocumentsController_suspendIncidentUploader: {
         parameters: {
             query?: never;
             header?: never;

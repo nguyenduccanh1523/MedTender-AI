@@ -30,6 +30,8 @@ import {
   type TenderItem,
   type TenderLot,
 } from '../api'
+import { getDocumentDownloadLink, listDocuments, type DocumentDetail } from '../../documents/api'
+import { UploadWizardModal } from '../../documents/components/upload-wizard-modal'
 
 const stageLabels: Record<ProcurementStage, string> = {
   RFQ: 'RFQ · Yêu cầu báo giá',
@@ -100,7 +102,7 @@ function TrashIcon() {
   )
 }
 
-type DetailTab = 'structure' | 'audits'
+type DetailTab = 'structure' | 'documents' | 'audits'
 type AuditActionFilter = 'ALL' | 'TENDER' | 'LOT' | 'ITEM'
 
 const auditFilterLabels: Record<AuditActionFilter, string> = {
@@ -167,6 +169,23 @@ export function TenderDetailView({
   const [auditPage, setAuditPage] = useState<number>(1)
   const [auditNextCursor, setAuditNextCursor] = useState<string | null>(null)
   const [auditTotal, setAuditTotal] = useState<number>(0)
+
+  // Step 05: Linked documents state
+  const [linkedDocs, setLinkedDocs] = useState<DocumentDetail[] | null>(null)
+  const [docsLoading, setDocsLoading] = useState(false)
+  const [showUploadModal, setShowUploadModal] = useState(false)
+
+  const loadLinkedDocs = async () => {
+    setDocsLoading(true)
+    try {
+      const docs = await listDocuments(slug, { tenderId: id })
+      setLinkedDocs(docs)
+    } catch {
+      setLinkedDocs([])
+    } finally {
+      setDocsLoading(false)
+    }
+  }
 
   useEffect(() => {
     let active = true
@@ -249,6 +268,9 @@ export function TenderDetailView({
     setActiveTab(next)
     if (next === 'audits' && !audits && canSeeAudits) {
       void fetchAudits()
+    }
+    if (next === 'documents' && linkedDocs === null) {
+      void loadLinkedDocs()
     }
   }
 
@@ -701,6 +723,16 @@ export function TenderDetailView({
             Lot & dòng hàng hóa
             <span className="tender-subtab-badge">{itemCount}</span>
           </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={activeTab === 'documents'}
+            className={activeTab === 'documents' ? 'tender-subtab is-active' : 'tender-subtab'}
+            onClick={() => selectTab('documents')}
+          >
+            Tài liệu & E-HSMT
+            {linkedDocs && <span className="tender-subtab-badge">{linkedDocs.length}</span>}
+          </button>
           {canSeeAudits && (
             <button
               type="button"
@@ -726,7 +758,146 @@ export function TenderDetailView({
             + Thêm lot
           </button>
         )}
+        {activeTab === 'documents' && canWrite && (
+          <button
+            className="button button-primary tender-add-lot-btn"
+            type="button"
+            onClick={() => setShowUploadModal(true)}
+          >
+            + Tải tài liệu
+          </button>
+        )}
       </div>
+
+      {activeTab === 'documents' && (
+        <section className="surface tender-list-panel" aria-label="Tài liệu và bằng chứng đính kèm hồ sơ thầu">
+          <div className="tender-entry-heading">
+            <div>
+              <strong>Tài liệu & Bằng chứng nguồn của Gói thầu</strong>
+              <p className="muted">
+                Các tệp E-HSMT, Bảng tiêu chuẩn kỹ thuật hoặc Báo giá đã liên kết và kiểm định SHA-256 an toàn.
+              </p>
+            </div>
+            <button
+              type="button"
+              className={docsLoading ? 'tender-icon-button is-spinning' : 'tender-icon-button'}
+              onClick={() => void loadLinkedDocs()}
+              disabled={docsLoading}
+              aria-label="Làm mới tài liệu"
+              title="Làm mới danh sách tài liệu"
+            >
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+                <path d="M3 3v5h5" />
+                <path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16" />
+                <path d="M16 16h5v5" />
+              </svg>
+            </button>
+          </div>
+
+          {docsLoading && !linkedDocs ? (
+            <div className="tender-skeleton-list"><i /><i /></div>
+          ) : !linkedDocs || linkedDocs.length === 0 ? (
+            <div className="tender-empty-state" style={{ padding: '2.5rem 1rem', textAlign: 'center' }}>
+              <p className="muted" style={{ marginBottom: '1rem' }}>
+                Chưa có tài liệu nào được liên kết với gói thầu này.
+              </p>
+              {canWrite && (
+                <button
+                  type="button"
+                  className="button button-primary"
+                  onClick={() => setShowUploadModal(true)}
+                >
+                  + Tải tài liệu E-HSMT đầu tiên
+                </button>
+              )}
+            </div>
+          ) : (
+            <ul className="organization-list tender-cards-list" style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginTop: '1rem' }}>
+              {linkedDocs.map((doc) => {
+                const latest = doc.latestVersion
+                const isClean = latest?.scanStatus === 'CLEAN'
+                const isQuarantined = latest?.scanStatus === 'QUARANTINED'
+
+                return (
+                  <li key={doc.id} style={{ listStyle: 'none' }}>
+                    <div className={`doc-vault-card${isQuarantined ? ' is-quarantined' : ''}`}>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '0.35rem', flexWrap: 'wrap' }}>
+                          <strong className="doc-vault-title" style={{ fontSize: '1rem' }}>{doc.title}</strong>
+                          <span
+                            className={`doc-class-badge ${
+                              doc.classification === 'CONFIDENTIAL' ? 'confidential' : 'internal'
+                            }`}
+                          >
+                            {doc.classification}
+                          </span>
+                          {isClean ? (
+                            <span className="doc-status-pill is-clean" style={{ fontSize: '10px', padding: '2px 8px' }}>
+                              ✓ SHA-256 Sạch
+                            </span>
+                          ) : isQuarantined ? (
+                            <span className="doc-status-pill is-quarantined" style={{ fontSize: '10px', padding: '2px 8px' }}>
+                              ⚠ Đã cách ly
+                            </span>
+                          ) : null}
+                        </div>
+                        {latest && (
+                          <div className="doc-meta-row">
+                            <span className="doc-filename-badge">{latest.originalFilename}</span>
+                            <span>{latest.versionLabel}</span>
+                            <span>{new Date(doc.createdAt).toLocaleDateString('vi-VN')}</span>
+                          </div>
+                        )}
+                      </div>
+
+                      {isClean && latest && (
+                        <button
+                          type="button"
+                          className="button button-secondary"
+                          style={{ fontSize: '12px', padding: '6px 14px', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+                          onClick={async () => {
+                            try {
+                              const link = await getDocumentDownloadLink(slug, doc.id, latest.id)
+                              const a = document.createElement('a')
+                              a.href = link.downloadUrl
+                              a.download = latest.originalFilename
+                              document.body.appendChild(a)
+                              a.click()
+                              document.body.removeChild(a)
+                            } catch {
+                              alert('Không thể tạo link tải xuống.')
+                            }
+                          }}
+                        >
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                            <polyline points="7 10 12 15 17 10" />
+                            <line x1="12" y1="15" x2="12" y2="3" />
+                          </svg>
+                          Tải xuống
+                        </button>
+                      )}
+                    </div>
+                  </li>
+                )
+              })}
+            </ul>
+          )}
+        </section>
+      )}
+
+      {showUploadModal && (
+        <UploadWizardModal
+          slug={slug}
+          defaultTenderId={id}
+          onSuccess={() => {
+            setShowUploadModal(false)
+            void loadLinkedDocs()
+          }}
+          onClose={() => setShowUploadModal(false)}
+        />
+      )}
 
       {activeTab === 'audits' && canSeeAudits ? (
         <section className="surface tender-audit-panel" aria-label="Nhật ký thay đổi hồ sơ">

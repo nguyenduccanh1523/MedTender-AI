@@ -3,12 +3,14 @@
 import Link from 'next/link'
 import { useState, type FormEvent } from 'react'
 
+import { TurnstileWidget } from '../../../components/security/turnstile-widget'
 import { submitOrganizationApplication } from '../api'
 
 export function OrganizationApplicationForm() {
   const [receipt, setReceipt] = useState<{ reference: string }>()
   const [pending, setPending] = useState(false)
   const [error, setError] = useState('')
+  const [turnstileToken, setTurnstileToken] = useState<string>('')
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -25,6 +27,7 @@ export function OrganizationApplicationForm() {
         contactName: String(fields.get('contactName') ?? ''),
         contactEmail: String(fields.get('contactEmail') ?? ''),
         contactPhone: String(fields.get('contactPhone') ?? ''),
+        turnstileToken: turnstileToken || undefined,
       })
       setReceipt(result)
     } catch (cause) {
@@ -65,6 +68,7 @@ export function OrganizationApplicationForm() {
         </div>
       </fieldset>
       <label className="consent"><input type="checkbox" required /> Tôi xác nhận thông tin trên là chính xác và đồng ý để MedTender AI liên hệ xác minh.</label>
+      <TurnstileWidget onSuccess={setTurnstileToken} />
       {error && <p className="notice notice-error" role="alert">{error}</p>}
       <button className="button button-primary" disabled={pending}>{pending ? 'Đang gửi hồ sơ…' : 'Gửi hồ sơ xét duyệt'}</button>
     </form>

@@ -143,6 +143,8 @@ export class OrganizationsService {
         membersCount,
         pendingInvitationsCount,
         auditRows,
+        tendersCount,
+        productsCount,
       ] = await Promise.all([
         tx.tender.findMany({
           where: { organizationId },
@@ -183,10 +185,9 @@ export class OrganizationsService {
           orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
           take: 100,
         }),
+        tx.tender.count({ where: { organizationId } }),
+        tx.product.count({ where: { organizationId, status: 'ACTIVE' } }),
       ])
-
-      const tendersCount = await tx.tender.count({ where: { organizationId } })
-      const productsCount = await tx.product.count({ where: { organizationId, status: 'ACTIVE' } })
 
       let publishedVersionsCount = 0
       let draftVersionsCount = 0

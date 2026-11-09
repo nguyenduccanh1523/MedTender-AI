@@ -94,3 +94,17 @@ export function purgeSecurityIncident(slug: string, incidentId: string, reason: 
     },
   )
 }
+
+export async function suspendIncidentUploader(
+  slug: string,
+  incidentId: string,
+  reason?: string,
+): Promise<{ success: boolean; message: string }> {
+  return api(
+    docPath(slug, `/governance/security-incidents/${encodeURIComponent(incidentId)}/suspend-uploader`),
+    {
+      method: 'POST',
+      body: JSON.stringify({ reason }),
+    },
+  )
+}

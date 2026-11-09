@@ -1,5 +1,5 @@
 import { BadRequestException } from '@nestjs/common'
-import { ApiProperty } from '@nestjs/swagger'
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger'
 import {
   DataClassification,
   DocumentType,
@@ -29,6 +29,8 @@ export class RequestUploadIntentDto {
   @ApiProperty({ type: String, required: false, nullable: true }) productId?: string | null
   @ApiProperty({ type: String, required: false, nullable: true }) documentId?: string | null
   @ApiProperty({ type: String, required: false, nullable: true }) notes?: string | null
+  @ApiPropertyOptional({ description: 'Cloudflare Turnstile anti-bot token' })
+  turnstileToken?: string
 }
 
 export class UploadIntentResponseDto {
@@ -77,6 +79,14 @@ export class LinkedProductSummaryDto {
   @ApiProperty() sku!: string
 }
 
+export class SecurityIncidentNoticeDto {
+  @ApiProperty() incidentReference!: string
+  @ApiProperty() reason!: string
+  @ApiProperty() isQuarantined!: boolean
+  @ApiProperty() autoDemotedToViewer!: boolean
+  @ApiProperty() newRole!: string
+}
+
 export class DocumentDetailDto {
   @ApiProperty() id!: string
   @ApiProperty() organizationId!: string
@@ -95,6 +105,8 @@ export class DocumentDetailDto {
   latestVersion!: DocumentVersionSummaryDto | null
   @ApiProperty({ type: [DocumentVersionSummaryDto] })
   versions!: DocumentVersionSummaryDto[]
+  @ApiProperty({ type: SecurityIncidentNoticeDto, required: false, nullable: true })
+  securityIncidentNotice?: SecurityIncidentNoticeDto | null
 }
 
 export class PolicyConsentStatusDto {
@@ -132,6 +144,8 @@ export class SecurityIncidentSummaryDto {
   @ApiProperty() status!: string
   @ApiProperty({ type: String, nullable: true }) ipAddress!: string | null
   @ApiProperty() uploadedByUserName!: string
+  @ApiProperty({ type: String, nullable: true }) uploadedByUserId!: string | null
+  @ApiProperty({ type: Boolean, required: false }) isUploaderSuspended?: boolean
   @ApiProperty() uploadedAt!: Date
   @ApiProperty({ type: String, nullable: true }) resolvedByUserName!: string | null
   @ApiProperty({ type: Date, nullable: true }) resolvedAt!: Date | null

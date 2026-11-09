@@ -5,6 +5,7 @@ import type { components } from '@medtender/contracts/api'
 import { completeDocumentUpload, createUploadIntent, type DocumentDetail } from '../api'
 import { listTenders, type Tender } from '../../tenders/api'
 import { listCatalogProductsPage, type ProductSummary } from '../../catalog/api'
+import { TurnstileWidget } from '../../../components/security/turnstile-widget'
 
 type DocumentType = components['schemas']['RequestUploadIntentDto']['documentType']
 type DataClassification = components['schemas']['RequestUploadIntentDto']['classification']
@@ -46,14 +47,21 @@ export function UploadWizardModal({
   const [selectedTenderId, setSelectedTenderId] = useState<string>(defaultTenderId ?? '')
   const [selectedProductId, setSelectedProductId] = useState<string>(defaultProductId ?? '')
   const [notes, setNotes] = useState('')
+  const [turnstileToken, setTurnstileToken] = useState<string>('')
 
   // Linked options fetched from workspace
   const [tenders, setTenders] = useState<Tender[]>([])
   const [products, setProducts] = useState<ProductSummary[]>([])
 
   const [step, setStep] = useState<
-    'IDLE' | 'HASHING' | 'INTENT' | 'STREAMING' | 'SCANNING' | 'DONE' | 'ERROR'
+    'IDLE' | 'HASHING' | 'INTENT' | 'STREAMING' | 'SCANNING' | 'DONE' | 'ERROR' | 'QUARANTINED'
   >('IDLE')
+  const [quarantineInfo, setQuarantineInfo] = useState<{
+    reference: string
+    reason: string
+    fileName: string
+    autoDemoted: boolean
+  } | null>(null)
   const [statusMessage, setStatusMessage] = useState('')
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
 
@@ -124,6 +132,7 @@ export function UploadWizardModal({
         tenderId: selectedTenderId || null,
         productId: selectedProductId || null,
         notes: notes.trim() || null,
+        turnstileToken: turnstileToken || undefined,
       })
 
       // Step 3: Stream raw binary to vault
@@ -149,6 +158,25 @@ export function UploadWizardModal({
       setStep('SCANNING')
       setStatusMessage('Đang xác minh cấu trúc tệp (Magic Bytes) và quét an toàn…')
       const completed = await completeDocumentUpload(slug, intent.documentId, intent.versionNumber)
+
+      const isQuarantined =
+        Boolean(completed.securityIncidentNotice?.isQuarantined) ||
+        completed.latestVersion?.scanStatus === 'QUARANTINED' ||
+        (completed.versions.length > 0 && completed.versions.every((v) => v.scanStatus === 'QUARANTINED'))
+
+      if (isQuarantined) {
+        setQuarantineInfo({
+          reference: completed.securityIncidentNotice?.incidentReference ?? 'INC-BẢO-MẬT',
+          reason:
+            completed.securityIncidentNotice?.reason ??
+            completed.latestVersion?.quarantineReason ??
+            'Phát hiện tệp vi phạm cấu trúc an toàn (Magic Bytes giả mạo hoặc chứa mã thực thi nguy hiểm).',
+          fileName: file.name,
+          autoDemoted: completed.securityIncidentNotice?.autoDemotedToViewer ?? true,
+        })
+        setStep('QUARANTINED')
+        return
+      }
 
       setStep('DONE')
       setStatusMessage('Hoàn tất kiểm tra bảo mật!')
@@ -213,7 +241,7 @@ export function UploadWizardModal({
           <form onSubmit={handleStartUpload} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
             {/* Custom Modern Dropzone */}
             <div>
-              <label style={{ fontSize: '0.8rem', fontWeight: 600, display: 'block', marginBottom: '0.4rem', color: 'var(--text-secondary, #94a3b8)' }}>
+              <label style={{ fontSize: '0.8rem', fontWeight: 600, display: 'block', marginBottom: '0.4rem', color: 'var(--muted)' }}>
                 Tệp tài liệu cần tải lên (PDF ≤ 100MB, DOCX/XLSX ≤ 50MB)
               </label>
 
@@ -233,14 +261,14 @@ export function UploadWizardModal({
                   onClick={() => fileInputRef.current?.click()}
                   style={{
                     border: isDragging
-                      ? '2px dashed var(--accent, #2a9d8f)'
-                      : '2px dashed var(--border-subtle, rgba(255, 255, 255, 0.18))',
+                      ? '2px dashed var(--teal)'
+                      : '2px dashed var(--line)',
                     borderRadius: '12px',
                     padding: '2rem 1.25rem',
                     textAlign: 'center',
                     background: isDragging
-                      ? 'rgba(42, 157, 143, 0.08)'
-                      : 'var(--surface-sunken, rgba(0, 0, 0, 0.25))',
+                      ? 'var(--accent-soft)'
+                      : 'var(--surface-muted)',
                     cursor: 'pointer',
                     transition: 'all 0.2s ease',
                   }}
@@ -250,8 +278,8 @@ export function UploadWizardModal({
                       width: '44px',
                       height: '44px',
                       borderRadius: '50%',
-                      background: 'rgba(42, 157, 143, 0.12)',
-                      color: 'var(--accent, #2a9d8f)',
+                      background: 'rgba(20, 184, 166, 0.12)',
+                      color: 'var(--teal)',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
@@ -261,9 +289,9 @@ export function UploadWizardModal({
                   >
                     ⤓
                   </div>
-                  <p style={{ margin: '0 0 0.35rem', fontSize: '0.9rem', fontWeight: 600 }}>
+                  <p style={{ margin: '0 0 0.35rem', fontSize: '0.9rem', fontWeight: 600, color: 'var(--heading)' }}>
                     Kéo thả tệp vào đây hoặc{' '}
-                    <span style={{ color: 'var(--accent, #2a9d8f)', textDecoration: 'underline' }}>
+                    <span style={{ color: 'var(--teal)', textDecoration: 'underline' }}>
                       chọn từ máy tính
                     </span>
                   </p>
@@ -279,8 +307,8 @@ export function UploadWizardModal({
                     justifyContent: 'space-between',
                     padding: '0.85rem 1rem',
                     borderRadius: '12px',
-                    background: 'var(--surface-sunken, rgba(0, 0, 0, 0.3))',
-                    border: '1px solid var(--accent, #2a9d8f)',
+                    background: 'var(--surface-muted)',
+                    border: '1px solid var(--teal)',
                   }}
                 >
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', overflow: 'hidden' }}>
@@ -289,8 +317,8 @@ export function UploadWizardModal({
                         width: '38px',
                         height: '38px',
                         borderRadius: '8px',
-                        background: 'rgba(42, 157, 143, 0.15)',
-                        color: 'var(--accent, #2a9d8f)',
+                        background: 'rgba(20, 184, 166, 0.15)',
+                        color: 'var(--teal)',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
@@ -306,6 +334,7 @@ export function UploadWizardModal({
                         style={{
                           fontSize: '0.875rem',
                           fontWeight: 600,
+                          color: 'var(--heading)',
                           textOverflow: 'ellipsis',
                           overflow: 'hidden',
                           whiteSpace: 'nowrap',
@@ -322,7 +351,7 @@ export function UploadWizardModal({
                   <button
                     type="button"
                     className="tender-text-button"
-                    style={{ fontSize: '0.775rem', flexShrink: 0, color: 'var(--accent, #2a9d8f)' }}
+                    style={{ fontSize: '0.775rem', flexShrink: 0, color: 'var(--teal)' }}
                     onClick={() => {
                       setFile(null)
                       if (fileInputRef.current) fileInputRef.current.value = ''
@@ -336,7 +365,7 @@ export function UploadWizardModal({
 
             {/* Document Title */}
             <div>
-              <label style={{ fontSize: '0.8rem', fontWeight: 600, display: 'block', marginBottom: '0.4rem', color: 'var(--text-secondary, #94a3b8)' }}>
+              <label style={{ fontSize: '0.8rem', fontWeight: 600, display: 'block', marginBottom: '0.4rem', color: 'var(--ink)' }}>
                 Tiêu đề tài liệu <span style={{ color: '#ef4444' }}>*</span>
               </label>
               <input
@@ -349,9 +378,9 @@ export function UploadWizardModal({
                   width: '100%',
                   padding: '0.65rem 0.85rem',
                   borderRadius: '8px',
-                  border: '1px solid var(--border-subtle, rgba(255,255,255,0.15))',
-                  background: 'var(--surface-sunken, rgba(0,0,0,0.3))',
-                  color: 'var(--text-primary, #fff)',
+                  border: '1px solid var(--field-line)',
+                  background: 'var(--field-bg)',
+                  color: 'var(--ink)',
                   fontSize: '0.875rem',
                 }}
               />
@@ -360,7 +389,7 @@ export function UploadWizardModal({
             {/* Doc Type & Classification Grid */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
               <div>
-                <label style={{ fontSize: '0.8rem', fontWeight: 600, display: 'block', marginBottom: '0.4rem', color: 'var(--text-secondary, #94a3b8)' }}>
+                <label style={{ fontSize: '0.8rem', fontWeight: 600, display: 'block', marginBottom: '0.4rem', color: 'var(--ink)' }}>
                   Loại tài liệu
                 </label>
                 <select
@@ -370,9 +399,9 @@ export function UploadWizardModal({
                     width: '100%',
                     padding: '0.65rem 0.85rem',
                     borderRadius: '8px',
-                    border: '1px solid var(--border-subtle, rgba(255,255,255,0.15))',
-                    background: 'var(--surface-sunken, rgba(0,0,0,0.3))',
-                    color: 'var(--text-primary, #fff)',
+                    border: '1px solid var(--field-line)',
+                    background: 'var(--field-bg)',
+                    color: 'var(--ink)',
                     fontSize: '0.85rem',
                   }}
                 >
@@ -384,7 +413,7 @@ export function UploadWizardModal({
               </div>
 
               <div>
-                <label style={{ fontSize: '0.8rem', fontWeight: 600, display: 'block', marginBottom: '0.4rem', color: 'var(--text-secondary, #94a3b8)' }}>
+                <label style={{ fontSize: '0.8rem', fontWeight: 600, display: 'block', marginBottom: '0.4rem', color: 'var(--ink)' }}>
                   Mức độ bảo mật
                 </label>
                 <select
@@ -394,9 +423,9 @@ export function UploadWizardModal({
                     width: '100%',
                     padding: '0.65rem 0.85rem',
                     borderRadius: '8px',
-                    border: '1px solid var(--border-subtle, rgba(255,255,255,0.15))',
-                    background: 'var(--surface-sunken, rgba(0,0,0,0.3))',
-                    color: 'var(--text-primary, #fff)',
+                    border: '1px solid var(--field-line)',
+                    background: 'var(--field-bg)',
+                    color: 'var(--ink)',
                     fontSize: '0.85rem',
                   }}
                 >
@@ -410,7 +439,7 @@ export function UploadWizardModal({
             {/* Context Link: Tender or Catalog Product from Workspace */}
             {docType === 'TENDER_DOC' ? (
               <div>
-                <label style={{ fontSize: '0.8rem', fontWeight: 600, display: 'block', marginBottom: '0.4rem', color: 'var(--text-secondary, #94a3b8)' }}>
+                <label style={{ fontSize: '0.8rem', fontWeight: 600, display: 'block', marginBottom: '0.4rem', color: 'var(--ink)' }}>
                   Gắn với Hồ sơ thầu trong tổ chức (Tùy chọn)
                 </label>
                 <select
@@ -420,9 +449,9 @@ export function UploadWizardModal({
                     width: '100%',
                     padding: '0.65rem 0.85rem',
                     borderRadius: '8px',
-                    border: '1px solid var(--border-subtle, rgba(255,255,255,0.15))',
-                    background: 'var(--surface-sunken, rgba(0,0,0,0.3))',
-                    color: 'var(--text-primary, #fff)',
+                    border: '1px solid var(--field-line)',
+                    background: 'var(--field-bg)',
+                    color: 'var(--ink)',
                     fontSize: '0.85rem',
                   }}
                 >
@@ -436,7 +465,7 @@ export function UploadWizardModal({
               </div>
             ) : (
               <div>
-                <label style={{ fontSize: '0.8rem', fontWeight: 600, display: 'block', marginBottom: '0.4rem', color: 'var(--text-secondary, #94a3b8)' }}>
+                <label style={{ fontSize: '0.8rem', fontWeight: 600, display: 'block', marginBottom: '0.4rem', color: 'var(--ink)' }}>
                   Gắn với Thiết bị Catalog trong tổ chức (Tùy chọn)
                 </label>
                 <select
@@ -446,9 +475,9 @@ export function UploadWizardModal({
                     width: '100%',
                     padding: '0.65rem 0.85rem',
                     borderRadius: '8px',
-                    border: '1px solid var(--border-subtle, rgba(255,255,255,0.15))',
-                    background: 'var(--surface-sunken, rgba(0,0,0,0.3))',
-                    color: 'var(--text-primary, #fff)',
+                    border: '1px solid var(--field-line)',
+                    background: 'var(--field-bg)',
+                    color: 'var(--ink)',
                     fontSize: '0.85rem',
                   }}
                 >
@@ -464,7 +493,7 @@ export function UploadWizardModal({
 
             {/* Notes */}
             <div>
-              <label style={{ fontSize: '0.8rem', fontWeight: 600, display: 'block', marginBottom: '0.4rem', color: 'var(--text-secondary, #94a3b8)' }}>
+              <label style={{ fontSize: '0.8rem', fontWeight: 600, display: 'block', marginBottom: '0.4rem', color: 'var(--ink)' }}>
                 Ghi chú phiên bản (Tùy chọn)
               </label>
               <textarea
@@ -476,14 +505,17 @@ export function UploadWizardModal({
                   width: '100%',
                   padding: '0.65rem 0.85rem',
                   borderRadius: '8px',
-                  border: '1px solid var(--border-subtle, rgba(255,255,255,0.15))',
-                  background: 'var(--surface-sunken, rgba(0,0,0,0.3))',
-                  color: 'var(--text-primary, #fff)',
+                  border: '1px solid var(--field-line)',
+                  background: 'var(--field-bg)',
+                  color: 'var(--ink)',
                   fontSize: '0.85rem',
                   resize: 'vertical',
                 }}
               />
             </div>
+
+            {/* Turnstile Security Shield */}
+            <TurnstileWidget onSuccess={setTurnstileToken} />
 
             {/* Footer buttons */}
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', marginTop: '0.5rem' }}>
@@ -506,7 +538,7 @@ export function UploadWizardModal({
         )}
 
         {/* Step: In-progress Security Checks */}
-        {step !== 'IDLE' && step !== 'ERROR' && (
+        {step !== 'IDLE' && step !== 'ERROR' && step !== 'QUARANTINED' && (
           <div style={{ padding: '2.5rem 1rem 1.5rem', textAlign: 'center' }}>
             {/* Spinning Radar Loader */}
             <div style={{ position: 'relative', width: '64px', height: '64px', margin: '0 auto 1.5rem' }}>
@@ -712,9 +744,9 @@ export function UploadWizardModal({
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
                 <span style={{ fontSize: '18px' }}>⚠</span>
-                <strong style={{ fontSize: '1rem' }}>Tải tệp không thành công</strong>
+                <strong style={{ fontSize: '1rem', color: '#ef4444' }}>Tải tệp không thành công</strong>
               </div>
-              <p style={{ margin: 0, lineHeight: 1.5, color: '#fca5a5' }}>{errorMessage}</p>
+              <p style={{ margin: 0, lineHeight: 1.5, color: 'var(--danger-ink, #b91c1c)' }}>{errorMessage}</p>
             </div>
 
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' }}>
@@ -731,6 +763,92 @@ export function UploadWizardModal({
                 onClick={onClose}
               >
                 Đóng
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Step: Quarantined & Auto-Demoted Zero-Trust Security Alert */}
+        {step === 'QUARANTINED' && (
+          <div style={{ padding: '0.5rem 0' }}>
+            <div
+              style={{
+                padding: '1.25rem',
+                borderRadius: '12px',
+                background: 'rgba(239, 68, 68, 0.08)',
+                border: '1px solid rgba(239, 68, 68, 0.35)',
+                marginBottom: '1.25rem',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', marginBottom: '0.85rem' }}>
+                <span style={{ fontSize: '26px' }}>🚨</span>
+                <div>
+                  <h3 style={{ margin: 0, fontSize: '1.08rem', color: '#dc2626', fontWeight: 800 }}>
+                    CẢNH BÁO BẢO MẬT: TỆP ĐÃ BỊ CÁCH LY & HẠ QUYỀN TÀI KHOẢN
+                  </h3>
+                  <span style={{ fontSize: '0.78rem', color: 'var(--muted)' }}>
+                    Cơ chế phòng thủ Zero-Trust tự động kích hoạt
+                  </span>
+                </div>
+              </div>
+
+              <div
+                style={{
+                  background: 'var(--surface-muted)',
+                  border: '1px solid var(--line)',
+                  borderRadius: '8px',
+                  padding: '0.85rem 1rem',
+                  fontSize: '0.84rem',
+                  marginBottom: '1rem',
+                }}
+              >
+                <div style={{ display: 'grid', gridTemplateColumns: '130px 1fr', gap: '0.45rem 0.75rem', alignItems: 'baseline' }}>
+                  <span style={{ color: 'var(--muted)', fontWeight: 600 }}>Tệp vi phạm:</span>
+                  <code style={{ color: 'var(--ink)', fontWeight: 700 }}>{quarantineInfo?.fileName}</code>
+
+                  <span style={{ color: 'var(--muted)', fontWeight: 600 }}>Mã sự cố:</span>
+                  <code style={{ color: '#ef4444', fontWeight: 700 }}>{quarantineInfo?.reference}</code>
+
+                  <span style={{ color: 'var(--muted)', fontWeight: 600 }}>Lý do cách ly:</span>
+                  <span style={{ color: '#dc2626', fontWeight: 600 }}>{quarantineInfo?.reason}</span>
+                </div>
+              </div>
+
+              <div style={{ fontSize: '0.825rem', color: 'var(--ink)', lineHeight: 1.6 }}>
+                <strong style={{ display: 'block', marginBottom: '0.35rem', color: '#dc2626' }}>
+                  Biện pháp tự động đã thực hiện theo chính sách an toàn y tế:
+                </strong>
+                <ul style={{ margin: 0, paddingLeft: '1.25rem' }}>
+                  <li>
+                    <strong>Cách ly tệp (Quarantine Ledger):</strong> Tệp bị khóa hoàn toàn quyền đọc/tải xuống/phân tích AI và lưu vào Sổ cái sự cố bảo mật để phục vụ thanh tra.
+                  </li>
+                  {quarantineInfo?.autoDemoted && (
+                    <li>
+                      <strong>Tự động hạ quyền tài khoản (Role → VIEWER):</strong> Quyền tải lên của bạn tạm thời bị khóa để ngăn chặn phát tán mã độc.
+                    </li>
+                  )}
+                  <li>
+                    <strong>Ẩn tài liệu Tuyệt mật:</strong> Theo chính sách bảo mật RBAC, vai trò VIEWER sẽ không thể nhìn thấy tài liệu RESTRICTED hoặc các tệp đang bị cách ly.
+                  </li>
+                </ul>
+              </div>
+            </div>
+
+            <p style={{ margin: '0 0 1.25rem', fontSize: '0.81rem', color: 'var(--muted)', lineHeight: 1.5 }}>
+              💡 <em>Lưu ý: Nếu đây là thử nghiệm an toàn hoặc nhầm lẫn, vui lòng liên hệ tài khoản OWNER / ADMIN của tổ chức để kiểm tra Sổ cái sự cố và khôi phục vai trò của bạn.</em>
+            </p>
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' }}>
+              <button
+                type="button"
+                className="button button-primary"
+                style={{ background: '#dc2626', borderColor: '#b91c1c', color: '#ffffff' }}
+                onClick={() => {
+                  onClose()
+                  window.location.reload()
+                }}
+              >
+                Đã hiểu — Tải lại trang (F5)
               </button>
             </div>
           </div>

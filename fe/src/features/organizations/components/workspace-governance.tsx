@@ -14,6 +14,7 @@ import {
 import {
   listSecurityIncidents,
   purgeSecurityIncident,
+  suspendIncidentUploader,
   type SecurityIncidentSummary,
 } from '../../documents/api'
 import { cacheOrganization, readCachedOrganization } from '../organization-cache'
@@ -85,6 +86,11 @@ export function WorkspaceGovernanceView({ slug }: { slug: string }) {
   const [purgingId, setPurgingId] = useState<string | null>(null)
   const [purgeReason, setPurgeReason] = useState('')
   const [showPurgeModal, setShowPurgeModal] = useState<SecurityIncidentSummary | null>(null)
+
+  const [showSuspendModal, setShowSuspendModal] = useState<SecurityIncidentSummary | null>(null)
+  const [suspendReason, setSuspendReason] = useState('')
+  const [isSuspending, setIsSuspending] = useState(false)
+  const [suspendError, setSuspendError] = useState<string | null>(null)
 
   const applyGovState = useCallback((gov: OrganizationGovernance) => {
     setData(gov)
@@ -682,69 +688,80 @@ export function WorkspaceGovernanceView({ slug }: { slug: string }) {
             </div>
           ) : (
             <div className="governance-table-wrap">
-              <table className="governance-table" aria-label="Danh sách sự cố bảo mật">
+              <table className="governance-table quarantine-table" aria-label="Danh sách sự cố bảo mật">
                 <thead>
                   <tr>
-                    <th>Mã sự cố & Thời gian</th>
-                    <th>Tên tệp vi phạm</th>
-                    <th>Mã băm SHA-256</th>
-                    <th>Lý do cách ly</th>
-                    <th>Người tải lên</th>
-                    <th>Trạng thái</th>
-                    <th style={{ textAlign: 'right' }}>Thao tác</th>
+                    <th style={{ width: '120px', whiteSpace: 'nowrap' }}>Mã sự cố</th>
+                    <th style={{ width: '190px' }}>Tệp vi phạm</th>
+                    <th style={{ width: '125px', whiteSpace: 'nowrap' }}>SHA-256</th>
+                    <th style={{ minWidth: '170px' }}>Lý do cách ly</th>
+                    <th style={{ width: '135px', whiteSpace: 'nowrap' }}>Người tải lên</th>
+                    <th style={{ width: '115px', textAlign: 'center', whiteSpace: 'nowrap' }}>Trạng thái</th>
+                    <th style={{ width: '175px', textAlign: 'right', whiteSpace: 'nowrap' }}>Thao tác</th>
                   </tr>
                 </thead>
                 <tbody>
                   {incidents.map((inc) => (
                     <tr key={inc.id}>
-                      <td>
-                        <strong>{inc.reference}</strong>
+                      <td style={{ whiteSpace: 'nowrap' }}>
+                        <strong style={{ fontFamily: 'ui-monospace, monospace', color: 'var(--ink)' }}>{inc.reference}</strong>
                         <br />
-                        <small className="muted">
+                        <small className="muted" style={{ fontSize: '0.72rem' }}>
                           {new Date(inc.uploadedAt).toLocaleString('vi-VN')}
                         </small>
                       </td>
                       <td>
-                        <span style={{ fontWeight: 600, color: '#f87171' }}>{inc.fileName}</span>
+                        <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.4rem' }}>
+                          <span style={{ fontSize: '1rem', flexShrink: 0, marginTop: '1px' }} aria-hidden="true">⚠️</span>
+                          <div style={{ minWidth: 0 }}>
+                            <span
+                              style={{
+                                display: 'block',
+                                fontWeight: 700,
+                                color: '#f87171',
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                                whiteSpace: 'nowrap',
+                                maxWidth: '160px',
+                              }}
+                              title={inc.fileName}
+                            >
+                              {inc.fileName}
+                            </span>
+                          </div>
+                        </div>
                       </td>
                       <td>
-                        <code style={{ fontSize: '0.75rem', wordBreak: 'break-all' }}>
-                          {inc.sha256.slice(0, 16)}...{inc.sha256.slice(-8)}
-                        </code>
-                      </td>
-                      <td>
-                        <span
-                          style={{
-                            display: 'inline-block',
-                            padding: '2px 8px',
-                            borderRadius: '4px',
-                            background: 'rgba(239, 68, 68, 0.15)',
-                            color: '#ef4444',
-                            fontSize: '0.75rem',
-                            fontWeight: 700,
-                            marginBottom: '0.25rem',
-                          }}
-                        >
-                          CÁCH LY AN TOÀN
+                        <span className="quarantine-sha-code" title={inc.sha256}>
+                          {inc.sha256.slice(0, 6)}...{inc.sha256.slice(-6)}
                         </span>
-                        <p style={{ margin: 0, fontSize: '0.825rem' }} className="muted">
-                          {inc.reason}
-                        </p>
                       </td>
                       <td>
-                        <strong>{inc.uploadedByUserName}</strong>
+                        <div>
+                          <span className="quarantine-reason-pill">
+                            🛡️ Cách ly an toàn
+                          </span>
+                          <p style={{ margin: 0, fontSize: '0.8rem', lineHeight: 1.4 }} className="muted">
+                            {inc.reason}
+                          </p>
+                        </div>
+                      </td>
+                      <td style={{ whiteSpace: 'nowrap' }}>
+                        <span style={{ fontWeight: 600, fontSize: '0.825rem' }}>{inc.uploadedByUserName}</span>
                         {inc.ipAddress && (
                           <>
                             <br />
-                            <small className="muted">IP: {inc.ipAddress}</small>
+                            <small className="muted" style={{ fontSize: '0.72rem', fontFamily: 'ui-monospace, monospace' }}>
+                              IP: {inc.ipAddress}
+                            </small>
                           </>
                         )}
                       </td>
-                      <td>
+                      <td style={{ textAlign: 'center', whiteSpace: 'nowrap' }}>
                         <span
                           className={
                             inc.status === 'PURGED'
-                              ? 'governance-org-status-badge'
+                              ? 'governance-org-status-badge is-purged'
                               : inc.status === 'RESOLVED'
                                 ? 'governance-org-status-badge is-active'
                                 : 'governance-org-status-badge is-danger'
@@ -755,24 +772,46 @@ export function WorkspaceGovernanceView({ slug }: { slug: string }) {
                             ? 'ĐÃ TIÊU HỦY'
                             : inc.status === 'RESOLVED'
                               ? 'ĐÃ GIẢI QUYẾT'
-                              : 'ĐANG CÁCH LY'}
+                              : 'CÁCH LY'}
                         </span>
                       </td>
-                      <td style={{ textAlign: 'right' }}>
-                        {inc.status !== 'PURGED' ? (
-                          <button
-                            type="button"
-                            className="tender-chip-button is-danger-chip"
-                            onClick={() => {
-                              setShowPurgeModal(inc)
-                              setPurgeReason('')
-                            }}
-                          >
-                            Tiêu hủy (Purge)
-                          </button>
-                        ) : (
-                          <small className="muted">Không khả dụng</small>
-                        )}
+                      <td style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
+                        <div className="quarantine-actions-wrap">
+                          {inc.isUploaderSuspended ? (
+                            <span className="quarantine-badge-suspended" title="Tài khoản đã bị đình chỉ hoạt động">
+                              🔒 Đã khóa
+                            </span>
+                          ) : (
+                            <button
+                              type="button"
+                              className="quarantine-btn quarantine-btn-suspend"
+                              onClick={() => {
+                                setShowSuspendModal(inc)
+                                setSuspendReason('')
+                                setSuspendError(null)
+                              }}
+                              title="Đình chỉ quyền truy cập của người tải tệp vi phạm"
+                            >
+                              🔒 Khóa TK
+                            </button>
+                          )}
+
+                          {inc.status !== 'PURGED' ? (
+                            <button
+                              type="button"
+                              className="quarantine-btn quarantine-btn-purge"
+                              onClick={() => {
+                                setShowPurgeModal(inc)
+                                setPurgeReason('')
+                              }}
+                              title="Xóa vật lý nhị phân của tệp khỏi kho lưu trữ"
+                            >
+                              🗑️ Tiêu hủy
+                            </button>
+                          ) : (
+                            <small className="muted" style={{ fontStyle: 'italic', fontSize: '0.72rem' }}>Đã tiêu hủy</small>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -1045,6 +1084,169 @@ export function WorkspaceGovernanceView({ slug }: { slug: string }) {
                   disabled={!purgeReason.trim() || Boolean(purgingId)}
                 >
                   {purgingId ? 'Đang tiêu hủy...' : 'Xác nhận tiêu hủy vĩnh viễn'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {showSuspendModal && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="suspend-modal-title"
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 9999,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            background: 'rgba(0, 0, 0, 0.75)',
+            backdropFilter: 'blur(4px)',
+            padding: '1rem',
+          }}
+        >
+          <div
+            className="surface"
+            style={{
+              maxWidth: '520px',
+              width: '100%',
+              borderRadius: '16px',
+              padding: '1.75rem',
+              boxShadow: '0 24px 48px rgba(0, 0, 0, 0.5)',
+              border: '1px solid rgba(239, 68, 68, 0.4)',
+            }}
+          >
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'flex-start',
+                justifyContent: 'space-between',
+                marginBottom: '1rem',
+              }}
+            >
+              <div>
+                <span
+                  style={{
+                    display: 'inline-block',
+                    padding: '2px 8px',
+                    borderRadius: '4px',
+                    background: 'rgba(239, 68, 68, 0.2)',
+                    color: '#ef4444',
+                    fontSize: '0.75rem',
+                    fontWeight: 700,
+                    marginBottom: '0.25rem',
+                  }}
+                >
+                  ĐẶC QUYỀN OWNER · PHONG TỎA BẢO MẬT
+                </span>
+                <h3 id="suspend-modal-title" style={{ margin: 0, fontSize: '1.2rem', color: '#ef4444' }}>
+                  Khóa tài khoản người gửi tệp mã độc
+                </h3>
+              </div>
+              <button
+                type="button"
+                className="tender-icon-button"
+                onClick={() => setShowSuspendModal(null)}
+                aria-label="Đóng"
+              >
+                ✕
+              </button>
+            </div>
+
+            <p style={{ fontSize: '0.875rem', lineHeight: 1.5, color: 'var(--ink)', margin: '0 0 0.85rem' }}>
+              Bạn sắp thực thi biện pháp kỷ luật bảo mật đối với người dùng{' '}
+              <strong style={{ color: '#ef4444' }}>{showSuspendModal.uploadedByUserName}</strong> vì sự cố{' '}
+              <strong>{showSuspendModal.reference}</strong> (Tệp: <em>{showSuspendModal.fileName}</em>).
+            </p>
+
+            <div
+              style={{
+                padding: '0.85rem 1rem',
+                borderRadius: '8px',
+                background: 'var(--danger-soft, rgba(239, 68, 68, 0.08))',
+                border: '1px solid var(--danger-line, rgba(239, 68, 68, 0.25))',
+                fontSize: '0.8rem',
+                lineHeight: 1.5,
+                color: 'var(--danger-ink, #b91c1c)',
+                marginBottom: '1.25rem',
+              }}
+            >
+              <strong>Hệ thống sẽ thực thi ngay lập tức:</strong>
+              <ul style={{ margin: '0.35rem 0 0 1rem', padding: 0 }}>
+                <li>Chuyển trạng thái thành viên sang <code>DISABLED</code>.</li>
+                <li>Hủy bỏ toàn bộ phiên làm việc (Revoke JWT Session) để buộc đăng xuất ngay.</li>
+                <li>Cắt toàn bộ quyền xem hoặc thao tác trên hồ sơ thầu, catalog và kho tài liệu.</li>
+              </ul>
+            </div>
+
+            {suspendError && (
+              <p className="notice notice-error" style={{ marginBottom: '1rem', fontSize: '0.825rem' }}>
+                {suspendError}
+              </p>
+            )}
+
+            <form
+              onSubmit={(e) => {
+                e.preventDefault()
+                if (isSuspending) return
+                setIsSuspending(true)
+                setSuspendError(null)
+                suspendIncidentUploader(slug, showSuspendModal.id, suspendReason.trim() || undefined)
+                  .then((res) => {
+                    setShowSuspendModal(null)
+                    setSuspendReason('')
+                    setPolicyNotice(res.message)
+                    return load()
+                  })
+                  .catch((err: unknown) => {
+                    setSuspendError(err instanceof ApiError ? err.message : 'Không thể khóa tài khoản.')
+                  })
+                  .finally(() => {
+                    setIsSuspending(false)
+                  })
+              }}
+            >
+              <label style={{ display: 'block', marginBottom: '1.25rem' }}>
+                <span style={{ fontSize: '0.8rem', fontWeight: 600, display: 'block', marginBottom: '0.4rem', color: 'var(--ink)' }}>
+                  Lý do đình chỉ (Tùy chọn)
+                </span>
+                <textarea
+                  rows={2}
+                  style={{
+                    width: '100%',
+                    padding: '0.65rem 0.8rem',
+                    borderRadius: '8px',
+                    border: '1px solid var(--field-line)',
+                    background: 'var(--field-bg)',
+                    color: 'var(--ink)',
+                    fontSize: '0.875rem',
+                    resize: 'vertical',
+                  }}
+                  placeholder="VD: Cố ý tải file độc hại giả mạo PDF, tạm thời khóa để điều tra an ninh nội bộ..."
+                  value={suspendReason}
+                  onChange={(e) => setSuspendReason(e.target.value)}
+                />
+              </label>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' }}>
+                <button
+                  type="button"
+                  className="button button-secondary"
+                  onClick={() => setShowSuspendModal(null)}
+                  disabled={isSuspending}
+                >
+                  Hủy bỏ
+                </button>
+                <button
+                  type="submit"
+                  className="button button-primary"
+                  style={{ backgroundColor: '#ef4444', borderColor: '#ef4444', color: '#fff' }}
+                  disabled={isSuspending}
+                >
+                  {isSuspending ? 'Đang khóa...' : 'Xác nhận khóa tài khoản'}
                 </button>
               </div>
             </form>

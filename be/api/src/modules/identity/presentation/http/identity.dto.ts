@@ -1,9 +1,11 @@
 import { BadRequestException } from '@nestjs/common'
-import { ApiProperty } from '@nestjs/swagger'
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger'
 
 export class LoginDto {
   @ApiProperty({ format: 'email' }) email!: string
   @ApiProperty({ format: 'password', maxLength: 128 }) password!: string
+  @ApiPropertyOptional({ description: 'Cloudflare Turnstile anti-bot token' })
+  turnstileToken?: string
 }
 
 export class RegisterDto extends LoginDto {
