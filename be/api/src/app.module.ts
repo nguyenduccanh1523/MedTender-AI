@@ -10,9 +10,11 @@ import { DocumentsModule } from './modules/documents/documents.module'
 import { ObjectStorageModule } from './integrations/object-storage/object-storage.module'
 import { TurnstileModule } from './integrations/turnstile/turnstile.module'
 import { AiPoliciesModule } from './modules/ai-policies/ai-policies.module'
+import { CacheModule } from './modules/cache/cache.module'
 
 @Module({
   imports: [
+    CacheModule,
     ObjectStorageModule,
     TurnstileModule,
     AiPoliciesModule,

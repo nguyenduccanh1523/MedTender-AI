@@ -16,6 +16,7 @@ import {
 } from '../../database/generated/client'
 import { ObjectStorageService } from '../../integrations/object-storage/object-storage.service'
 import { AiPoliciesService } from '../ai-policies/ai-policies.service'
+import { CacheService } from '../cache/cache.service'
 import { LEGAL_NOTICES } from '../legal-notices/legal-notices.config'
 import { OrganizationsService } from '../organizations/application/organizations.service'
 import {
@@ -34,34 +35,21 @@ const uploadRoles = new Set<MembershipRole>(['OWNER', 'ADMIN', 'BID_MANAGER', 'C
 
 @Injectable()
 export class DocumentsService {
-  private readonly queryCache = new Map<string, { data: any; expiresAt: number }>()
-
   constructor(
     private readonly database: DatabaseService,
     private readonly organizations: OrganizationsService,
     private readonly storage: ObjectStorageService,
     private readonly aiPolicies: AiPoliciesService,
+    private readonly cache?: CacheService,
   ) {}
 
-  private getCached<T>(key: string): T | undefined {
-    const entry = this.queryCache.get(key)
-    if (!entry) return undefined
-    if (entry.expiresAt <= Date.now()) {
-      this.queryCache.delete(key)
-      return undefined
+  private async invalidateOrgCache(organizationId: string): Promise<void> {
+    if (this.cache) {
+      await this.cache.invalidatePrefix('docs:')
+      await this.cache.invalidatePrefix('consent:')
     }
-    return entry.data as T
-  }
-
-  private setCached<T>(key: string, data: T, ttlMs = 20_000): void {
-    this.queryCache.set(key, { data, expiresAt: Date.now() + ttlMs })
-  }
-
-  private invalidateOrgCache(organizationId: string): void {
-    for (const key of this.queryCache.keys()) {
-      if (key.includes(organizationId)) {
-        this.queryCache.delete(key)
-      }
+    if (typeof this.organizations.invalidateWorkspaceCache === 'function') {
+      await this.organizations.invalidateWorkspaceCache(organizationId)
     }
   }
 
@@ -70,11 +58,13 @@ export class DocumentsService {
   }
 
   async getPolicyConsentStatus(userId: string, slug: string): Promise<PolicyConsentStatusDto> {
-    return this.organizations.withWorkspace(userId, slug, async (tx, organizationId) => {
-      const cacheKey = `consent:${organizationId}:${userId}`
-      const cached = this.getCached<PolicyConsentStatusDto>(cacheKey)
+    const cacheKey = `consent:${slug}:${userId}`
+    if (this.cache) {
+      const cached = await this.cache.get<PolicyConsentStatusDto>(cacheKey)
       if (cached) return cached
+    }
 
+    const result = await this.organizations.withWorkspace(userId, slug, async (tx, organizationId) => {
       const consent = await tx.userPolicyConsent.findUnique({
         where: {
           organizationId_userId_policyVersion: {
@@ -85,7 +75,7 @@ export class DocumentsService {
         },
       })
 
-      const result: PolicyConsentStatusDto = {
+      const dto: PolicyConsentStatusDto = {
         hasConsented: Boolean(consent && consent.termsAccepted && consent.privacyAccepted),
         currentPolicyVersion: LEGAL_NOTICES.CURRENT_POLICY_VERSION,
         acceptedAt: consent ? consent.acceptedAt : null,
@@ -96,9 +86,13 @@ export class DocumentsService {
         aiNoticeTitle: LEGAL_NOTICES.AI_NOTICE_TITLE,
         aiNoticeSummary: LEGAL_NOTICES.AI_NOTICE_SUMMARY,
       }
-      this.setCached(cacheKey, result, 60_000)
-      return result
+      return dto
     })
+
+    if (this.cache) {
+      await this.cache.set(cacheKey, result, 60)
+    }
+    return result
   }
 
   async acceptPolicyConsent(
@@ -603,11 +597,13 @@ export class DocumentsService {
     slug: string,
     options?: { tenderId?: string; productId?: string },
   ): Promise<DocumentDetailDto[]> {
-    return this.organizations.withWorkspace(userId, slug, async (tx, organizationId, role) => {
-      const cacheKey = `docs:${organizationId}:${role}:${options?.tenderId || ''}:${options?.productId || ''}`
-      const cached = this.getCached<DocumentDetailDto[]>(cacheKey)
+    const cacheKey = `docs:${slug}:${userId}:${options?.tenderId || ''}:${options?.productId || ''}`
+    if (this.cache) {
+      const cached = await this.cache.get<DocumentDetailDto[]>(cacheKey)
       if (cached) return cached
+    }
 
+    const finalDocs = await this.organizations.withWorkspace(userId, slug, async (tx, organizationId, role) => {
       const isViewer = role === 'VIEWER'
 
       const where: Prisma.DocumentWhereInput = { organizationId }
@@ -630,7 +626,7 @@ export class DocumentsService {
         orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
       })
 
-      const finalDocs = docs
+      const mapped = docs
         .map((doc) => {
           const visibleVersions = isViewer
             ? doc.versions.filter(
@@ -682,9 +678,13 @@ export class DocumentsService {
         })
         .filter((d): d is DocumentDetailDto => d !== null)
 
-      this.setCached(cacheKey, finalDocs, 20_000)
-      return finalDocs
+      return mapped
     })
+
+    if (this.cache) {
+      await this.cache.set(cacheKey, finalDocs, 30)
+    }
+    return finalDocs
   }
 
   async getDocumentDetail(
@@ -933,7 +933,7 @@ export class DocumentsService {
       })
 
       return incidents.map((inc) => {
-        const detailsObj = (typeof inc.details === 'object' && inc.details !== null) ? (inc.details as Record<string, any>) : {}
+        const detailsObj = (typeof inc.details === 'object' && inc.details !== null) ? (inc.details as Record<string, unknown>) : {}
         return {
           id: inc.id,
           reference: inc.reference,
@@ -990,7 +990,7 @@ export class DocumentsService {
 
       const suspensionReason = reason?.trim() || `Đình chỉ do sự cố bảo mật nghiêm trọng ${incident.reference} (${incident.fileName})`
 
-      const detailsObj = (typeof incident.details === 'object' && incident.details !== null) ? (incident.details as Record<string, any>) : {}
+      const detailsObj = (typeof incident.details === 'object' && incident.details !== null) ? (incident.details as Record<string, unknown>) : {}
       await tx.securityIncident.update({
         where: { id: incident.id },
         data: {

@@ -72,7 +72,7 @@ export function UploadWizardModal({
       listCatalogProductsPage(slug, { limit: 50 }).catch(() => ({ items: [] })),
     ]).then(([tenderList, productPage]) => {
       if (active) {
-        setTenders(Array.isArray(tenderList) ? tenderList : ((tenderList as any).items ?? []))
+        setTenders(Array.isArray(tenderList) ? tenderList : (((tenderList as unknown as { items?: typeof tenderList }).items) ?? []))
         setProducts(productPage.items ?? [])
       }
     })

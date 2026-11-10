@@ -4,6 +4,12 @@ import Link from 'next/link'
 import { useCallback, useEffect, useState } from 'react'
 
 import { ApiError } from '../../../lib/api/client'
+import {
+  invalidateResource,
+  loadResource,
+  readResource,
+  writeResource,
+} from '../../../lib/api/resource-cache'
 import { getWorkspaceActivity, type Organization, type WorkspaceActivity } from '../api'
 import { roleLabels } from '../roles'
 
@@ -92,8 +98,11 @@ function matchLogScope(action: string, scope: LogScopeFilter) {
 }
 
 export function WorkspaceActivityView({ slug }: { slug: string }) {
-  const [data, setData] = useState<WorkspaceActivity | null>(null)
-  const [loading, setLoading] = useState(true)
+  const cacheKey = `activity:${slug}`
+  const cachedData = readResource<WorkspaceActivity>(cacheKey)
+
+  const [data, setData] = useState<WorkspaceActivity | null>(cachedData ?? null)
+  const [loading, setLoading] = useState(cachedData === undefined)
   const [error, setError] = useState<string | null>(null)
 
   const [activeSubtab, setActiveSubtab] = useState<'queue' | 'logs'>('queue')
@@ -101,30 +110,39 @@ export function WorkspaceActivityView({ slug }: { slug: string }) {
   const [logLimit, setLogLimit] = useState(10)
   const [logPage, setLogPage] = useState(1)
 
-  const load = useCallback(async () => {
-    setLoading(true)
+  const load = useCallback(async (force = false) => {
+    if (force) {
+      invalidateResource(cacheKey)
+      setLoading(true)
+    }
     setError(null)
     try {
-      const response = await getWorkspaceActivity(slug)
+      const response = await (force
+        ? getWorkspaceActivity(slug)
+        : loadResource(cacheKey, () => getWorkspaceActivity(slug)))
+      writeResource(cacheKey, response)
       setData(response)
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Không tải được dữ liệu hoạt động.')
+      if (!cachedData) {
+        setError(err instanceof ApiError ? err.message : 'Không tải được dữ liệu hoạt động.')
+      }
     } finally {
       setLoading(false)
     }
-  }, [slug])
+  }, [slug, cacheKey, cachedData])
 
   useEffect(() => {
     let active = true
-    getWorkspaceActivity(slug)
+    loadResource(cacheKey, () => getWorkspaceActivity(slug))
       .then((response) => {
         if (active) {
+          writeResource(cacheKey, response)
           setData(response)
           setError(null)
         }
       })
       .catch((err: unknown) => {
-        if (active) {
+        if (active && !cachedData) {
           setError(err instanceof ApiError ? err.message : 'Không tải được dữ liệu hoạt động.')
         }
       })
@@ -134,7 +152,7 @@ export function WorkspaceActivityView({ slug }: { slug: string }) {
     return () => {
       active = false
     }
-  }, [slug])
+  }, [slug, cacheKey, cachedData])
 
   if (loading && !data) {
     return (
@@ -155,7 +173,7 @@ export function WorkspaceActivityView({ slug }: { slug: string }) {
         <p className="notice notice-error" role="alert">
           {error ?? 'Không thể hiển thị bảng hoạt động.'}
         </p>
-        <button className="button button-secondary" type="button" onClick={() => void load()}>
+        <button className="button button-secondary" type="button" onClick={() => void load(true)}>
           Thử lại
         </button>
       </section>
@@ -293,7 +311,7 @@ export function WorkspaceActivityView({ slug }: { slug: string }) {
           <button
             className={loading ? 'tender-icon-button is-spinning' : 'tender-icon-button'}
             type="button"
-            onClick={() => void load()}
+            onClick={() => void load(true)}
             disabled={loading}
             aria-label="Làm mới bảng hoạt động"
             title="Làm mới dữ liệu hoạt động"

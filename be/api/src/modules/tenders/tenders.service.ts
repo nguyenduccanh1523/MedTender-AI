@@ -7,6 +7,7 @@ import {
 } from '@nestjs/common'
 import { Prisma, type MembershipRole } from '../../database/generated/client'
 import { DatabaseService } from '../../database/database.service'
+import { CacheService } from '../cache/cache.service'
 import { OrganizationsService } from '../organizations/application/organizations.service'
 import {
   encodeTenderCursor,
@@ -62,6 +63,7 @@ export class TendersService {
   constructor(
     private readonly database: DatabaseService,
     private readonly organizations: OrganizationsService,
+    private readonly cache?: CacheService,
   ) {}
 
   private async recordAudit(tx: Prisma.TransactionClient, entry: AuditDraft) {
@@ -78,11 +80,23 @@ export class TendersService {
         details: entry.details ?? {},
       },
     })
+    if (this.cache) {
+      await this.cache.invalidatePrefix('tenders:')
+    }
+    if (typeof this.organizations.invalidateWorkspaceCache === 'function') {
+      await this.organizations.invalidateWorkspaceCache(entry.organizationId)
+    }
   }
 
   async list(userId: string, slug: string, rawQuery?: Record<string, unknown>) {
     const query = parseTenderListQuery(rawQuery)
-    return this.organizations.withWorkspace(userId, slug, async (tx, organizationId) => {
+    const cacheKey = `tenders:${slug}:${JSON.stringify(rawQuery || {})}`
+    if (this.cache) {
+      const cached = await this.cache.get<Record<string, unknown> | Array<Record<string, unknown>>>(cacheKey)
+      if (cached) return cached as never
+    }
+
+    const result = await this.organizations.withWorkspace(userId, slug, async (tx, organizationId) => {
       const filters: Prisma.TenderWhereInput[] = [{ organizationId }]
       if (query.stage) filters.push({ procurementStage: query.stage })
       if (query.q) {
@@ -150,6 +164,11 @@ export class TendersService {
         total,
       }
     })
+
+    if (this.cache) {
+      await this.cache.set(cacheKey, result, 30)
+    }
+    return result
   }
 
   async create(userId: string, slug: string, body: CreateTenderDto) {
@@ -526,15 +545,13 @@ export class TendersService {
         }
         : baseWhere
 
-      const [rows, total] = await Promise.all([
-        tx.tenderAuditLog.findMany({
-          where,
-          include: { actor: { select: { displayName: true } } },
-          orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
-          take: parsed.limit + 1,
-        }),
-        tx.tenderAuditLog.count({ where: baseWhere }),
-      ])
+      const rows = await tx.tenderAuditLog.findMany({
+        where,
+        include: { actor: { select: { displayName: true } } },
+        orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+        take: parsed.limit + 1,
+      })
+      const total = await tx.tenderAuditLog.count({ where: baseWhere })
 
       const hasMore = rows.length > parsed.limit
       const sliced = hasMore ? rows.slice(0, parsed.limit) : rows

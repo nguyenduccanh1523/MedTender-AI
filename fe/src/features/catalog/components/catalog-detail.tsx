@@ -183,7 +183,17 @@ export function CatalogDetailView({ slug, productId }: { slug: string; productId
 
   useEffect(() => {
     let active = true
-    void loadDocs()
+    listDocuments(slug, { productId })
+      .then((docs) => {
+        if (active) setLinkedDocs(docs)
+      })
+      .catch(() => {
+        if (active) setLinkedDocs([])
+      })
+      .finally(() => {
+        if (active) setDocsLoading(false)
+      })
+
     getCatalogProduct(slug, productId)
       .then((detail) => {
         if (!active) return

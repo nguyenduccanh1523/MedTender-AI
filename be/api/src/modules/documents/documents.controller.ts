@@ -93,7 +93,10 @@ export class DocumentsController {
     @Query('token') queryToken: string | undefined,
     @Headers('x-upload-token') headerToken: string | undefined,
   ) {
-    const rawReq = req as any
+    const rawReq = req as unknown as IncomingMessage & {
+      body?: unknown
+      rawBody?: Buffer
+    } & AsyncIterable<Buffer | string>
     const token =
       (queryToken ? String(queryToken).trim() : undefined) ||
       (headerToken ? String(headerToken).trim() : undefined) ||

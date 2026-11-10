@@ -5,6 +5,12 @@ import { useCallback, useEffect, useState, type FormEvent } from 'react'
 
 import { ApiError } from '../../../lib/api/client'
 import {
+  invalidateResource,
+  loadResource,
+  readResource,
+  writeResource,
+} from '../../../lib/api/resource-cache'
+import {
   getOrganizationGovernance,
   updateOrganizationGovernance,
   updateOrganizationMember,
@@ -59,20 +65,27 @@ export function WorkspaceGovernanceView({ slug }: { slug: string }) {
   const role = useWorkspaceRole()
   const isOwner = canManageOrganizationGovernance(role)
 
-  const [data, setData] = useState<OrganizationGovernance | null>(null)
-  const [loading, setLoading] = useState(true)
+  const govCacheKey = `governance:${slug}`
+  const incsCacheKey = `incidents:${slug}`
+  const cachedGov = readResource<OrganizationGovernance>(govCacheKey)
+  const cachedIncs = readResource<SecurityIncidentSummary[]>(incsCacheKey)
+
+  const [data, setData] = useState<OrganizationGovernance | null>(cachedGov ?? null)
+  const [loading, setLoading] = useState(isOwner && cachedGov === undefined)
   const [error, setError] = useState<string | null>(null)
 
   const [activeTab, setActiveTab] = useState<GovernanceTab>('policy')
-  const [orgName, setOrgName] = useState('')
-  const [requireReviewer, setRequireReviewer] = useState(true)
+  const [orgName, setOrgName] = useState(cachedGov?.name ?? '')
+  const [requireReviewer, setRequireReviewer] = useState(cachedGov?.settings.requireIndependentReviewer ?? true)
   const [classification, setClassification] = useState<'INTERNAL' | 'CONFIDENTIAL' | 'RESTRICTED'>(
-    'CONFIDENTIAL',
+    cachedGov?.settings.defaultDataClassification ?? 'CONFIDENTIAL',
   )
-  const [externalAiPolicy, setExternalAiPolicy] = useState<'OFF' | 'INTERNAL_ONLY'>('OFF')
-  const [maxLotsPerTender, setMaxLotsPerTender] = useState(20)
-  const [maxItemsPerTender, setMaxItemsPerTender] = useState(100)
-  const [maxSpecsPerVersion, setMaxSpecsPerVersion] = useState(200)
+  const [externalAiPolicy, setExternalAiPolicy] = useState<'OFF' | 'INTERNAL_ONLY'>(
+    cachedGov?.settings.externalAiPolicy ?? 'OFF',
+  )
+  const [maxLotsPerTender, setMaxLotsPerTender] = useState(cachedGov?.settings.maxLotsPerTender ?? 20)
+  const [maxItemsPerTender, setMaxItemsPerTender] = useState(cachedGov?.settings.maxItemsPerTender ?? 100)
+  const [maxSpecsPerVersion, setMaxSpecsPerVersion] = useState(cachedGov?.settings.maxSpecsPerVersion ?? 200)
 
   const [savingPolicy, setSavingPolicy] = useState(false)
   const [policyNotice, setPolicyNotice] = useState<string | null>(null)
@@ -82,7 +95,7 @@ export function WorkspaceGovernanceView({ slug }: { slug: string }) {
   const [auditLimit, setAuditLimit] = useState(10)
   const [auditPage, setAuditPage] = useState(1)
 
-  const [incidents, setIncidents] = useState<SecurityIncidentSummary[]>([])
+  const [incidents, setIncidents] = useState<SecurityIncidentSummary[]>(cachedIncs ?? [])
   const [purgingId, setPurgingId] = useState<string | null>(null)
   const [purgeReason, setPurgeReason] = useState('')
   const [showPurgeModal, setShowPurgeModal] = useState<SecurityIncidentSummary | null>(null)
@@ -103,43 +116,53 @@ export function WorkspaceGovernanceView({ slug }: { slug: string }) {
     setMaxSpecsPerVersion(gov.settings.maxSpecsPerVersion)
   }, [])
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (force = false) => {
     if (!isOwner) {
       setLoading(false)
       return
     }
-    setLoading(true)
+    if (force) {
+      invalidateResource(govCacheKey)
+      invalidateResource(incsCacheKey)
+      setLoading(true)
+    }
     setError(null)
     try {
       const [gov, incs] = await Promise.all([
-        getOrganizationGovernance(slug),
-        listSecurityIncidents(slug).catch(() => []),
+        force ? getOrganizationGovernance(slug) : loadResource(govCacheKey, () => getOrganizationGovernance(slug)),
+        force ? listSecurityIncidents(slug).catch(() => []) : loadResource(incsCacheKey, () => listSecurityIncidents(slug).catch(() => [])),
       ])
+      writeResource(govCacheKey, gov)
+      writeResource(incsCacheKey, incs)
       applyGovState(gov)
       setIncidents(incs)
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Không tải được cấu hình quản trị tổ chức.')
+      if (!cachedGov) {
+        setError(err instanceof ApiError ? err.message : 'Không tải được cấu hình quản trị tổ chức.')
+      }
     } finally {
       setLoading(false)
     }
-  }, [slug, isOwner, applyGovState])
+  }, [slug, isOwner, applyGovState, govCacheKey, incsCacheKey, cachedGov])
 
   useEffect(() => {
     if (!isOwner) return
     let active = true
     Promise.all([
-      getOrganizationGovernance(slug),
-      listSecurityIncidents(slug).catch(() => []),
+      loadResource(govCacheKey, () => getOrganizationGovernance(slug)),
+      loadResource(incsCacheKey, () => listSecurityIncidents(slug).catch(() => [])),
     ])
       .then(([gov, incs]) => {
         if (active) {
+          writeResource(govCacheKey, gov)
+          writeResource(incsCacheKey, incs)
           applyGovState(gov)
           setIncidents(incs)
           setError(null)
         }
       })
       .catch((err: unknown) => {
-        if (active) {
+        if (active && !cachedGov) {
           setError(
             err instanceof ApiError ? err.message : 'Không tải được cấu hình quản trị tổ chức.',
           )
@@ -151,7 +174,7 @@ export function WorkspaceGovernanceView({ slug }: { slug: string }) {
     return () => {
       active = false
     }
-  }, [slug, isOwner, applyGovState])
+  }, [slug, isOwner, applyGovState, govCacheKey, incsCacheKey, cachedGov])
 
   if (!isOwner) {
     return (
@@ -209,6 +232,8 @@ export function WorkspaceGovernanceView({ slug }: { slug: string }) {
         maxSpecsPerVersion: Number(maxSpecsPerVersion),
       })
       applyGovState(updated)
+      writeResource(govCacheKey, updated)
+      invalidateResource(`activity:${slug}`)
       const cached = readCachedOrganization(slug)
       if (cached) {
         cacheOrganization({ ...cached, name: updated.name })
@@ -230,7 +255,10 @@ export function WorkspaceGovernanceView({ slug }: { slug: string }) {
     setPolicyNotice(null)
     try {
       await updateOrganizationMember(slug, memberUserId, patch)
-      await load()
+      invalidateResource(govCacheKey)
+      invalidateResource(`activity:${slug}`)
+      invalidateResource(`members:${slug}`)
+      await load(true)
       setPolicyNotice('Đã cập nhật phân quyền / trạng thái thành viên.')
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Không cập nhật được quyền thành viên.')
@@ -1034,7 +1062,7 @@ export function WorkspaceGovernanceView({ slug }: { slug: string }) {
                     setShowPurgeModal(null)
                     setPurgeReason('')
                     setPolicyNotice('Đã tiêu hủy tệp bị cách ly và cập nhật sổ cái kiểm toán an toàn.')
-                    return load()
+                    return load(true)
                   })
                   .catch((err: unknown) => {
                     setError(err instanceof ApiError ? err.message : 'Không thể tiêu hủy tệp cách ly.')
@@ -1199,7 +1227,7 @@ export function WorkspaceGovernanceView({ slug }: { slug: string }) {
                     setShowSuspendModal(null)
                     setSuspendReason('')
                     setPolicyNotice(res.message)
-                    return load()
+                    return load(true)
                   })
                   .catch((err: unknown) => {
                     setSuspendError(err instanceof ApiError ? err.message : 'Không thể khóa tài khoản.')

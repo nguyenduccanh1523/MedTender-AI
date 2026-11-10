@@ -5,6 +5,12 @@ import { useRouter } from 'next/navigation'
 import { useCallback, useEffect, useState, type FormEvent } from 'react'
 
 import { ApiError } from '../../../lib/api/client'
+import {
+  invalidateResource,
+  loadResource,
+  readResource,
+  writeResource,
+} from '../../../lib/api/resource-cache'
 import { canManageCatalog, useWorkspaceRole } from '../../organizations/workspace-permissions'
 import {
   createCatalogProduct,
@@ -23,16 +29,19 @@ export function CatalogList({ slug }: { slug: string }) {
   const role = useWorkspaceRole()
   const canWrite = canManageCatalog(role)
 
-  const [products, setProducts] = useState<ProductSummary[]>([])
-  const [total, setTotal] = useState(0)
-  const [nextCursor, setNextCursor] = useState<string | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [loadingMore, setLoadingMore] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-
   const [searchInput, setSearchInput] = useState('')
   const [activeQuery, setActiveQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState<'ALL' | 'ACTIVE' | 'ARCHIVED'>('ACTIVE')
+
+  const cacheKey = `catalog:${slug}:${activeQuery}:${statusFilter}`
+  const cachedPage = readResource<{ items: ProductSummary[]; total: number; nextCursor: string | null }>(cacheKey)
+
+  const [products, setProducts] = useState<ProductSummary[]>(cachedPage?.items ?? [])
+  const [total, setTotal] = useState(cachedPage?.total ?? 0)
+  const [nextCursor, setNextCursor] = useState<string | null>(cachedPage?.nextCursor ?? null)
+  const [loading, setLoading] = useState(cachedPage === undefined)
+  const [loadingMore, setLoadingMore] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   const [creating, setCreating] = useState(false)
   const [submitting, setSubmitting] = useState(false)
@@ -45,34 +54,44 @@ export function CatalogList({ slug }: { slug: string }) {
   const [notes, setNotes] = useState('')
 
   const loadFirstPage = useCallback(
-    async (queryText: string, status: 'ALL' | 'ACTIVE' | 'ARCHIVED') => {
-      setLoading(true)
+    async (queryText: string, status: 'ALL' | 'ACTIVE' | 'ARCHIVED', force = false) => {
+      const key = `catalog:${slug}:${queryText}:${status}`
+      if (force) {
+        invalidateResource(key)
+        setLoading(true)
+      }
       setError(null)
       try {
-        const page = await listCatalogProductsPage(slug, {
-          q: queryText || undefined,
-          status,
-        })
+        const page = await (force
+          ? listCatalogProductsPage(slug, { q: queryText || undefined, status })
+          : loadResource(key, () => listCatalogProductsPage(slug, { q: queryText || undefined, status })))
+        writeResource(key, page)
         setProducts(page.items)
         setTotal(page.total)
         setNextCursor(page.nextCursor)
       } catch (err) {
-        setError(err instanceof ApiError ? err.message : 'Không tải được danh mục sản phẩm.')
+        if (!cachedPage) {
+          setError(err instanceof ApiError ? err.message : 'Không tải được danh mục sản phẩm.')
+        }
       } finally {
         setLoading(false)
       }
     },
-    [slug],
+    [slug, cachedPage],
   )
 
   useEffect(() => {
     let active = true
-    listCatalogProductsPage(slug, {
-      q: activeQuery || undefined,
-      status: statusFilter,
-    })
+    const key = `catalog:${slug}:${activeQuery}:${statusFilter}`
+    loadResource(key, () =>
+      listCatalogProductsPage(slug, {
+        q: activeQuery || undefined,
+        status: statusFilter,
+      }),
+    )
       .then((page) => {
         if (active) {
+          writeResource(key, page)
           setProducts(page.items)
           setTotal(page.total)
           setNextCursor(page.nextCursor)
@@ -80,7 +99,7 @@ export function CatalogList({ slug }: { slug: string }) {
         }
       })
       .catch((err: unknown) => {
-        if (active) {
+        if (active && !cachedPage) {
           setError(err instanceof ApiError ? err.message : 'Không tải được danh mục sản phẩm.')
         }
       })
@@ -90,7 +109,7 @@ export function CatalogList({ slug }: { slug: string }) {
     return () => {
       active = false
     }
-  }, [slug, activeQuery, statusFilter])
+  }, [slug, activeQuery, statusFilter, cachedPage])
 
   async function handleLoadMore() {
     if (!nextCursor || loadingMore) return
@@ -146,6 +165,9 @@ export function CatalogList({ slug }: { slug: string }) {
       setCategory('')
       setModelCode('')
       setNotes('')
+      invalidateResource(`catalog:${slug}:${activeQuery}:${statusFilter}`)
+      invalidateResource(`catalog:${slug}::ACTIVE`)
+      invalidateResource(`activity:${slug}`)
       router.push(`/${slug}/catalog/${created.id}`)
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Không tạo được sản phẩm catalog.')
@@ -170,7 +192,7 @@ export function CatalogList({ slug }: { slug: string }) {
           <button
             className={loading ? 'tender-icon-button is-spinning' : 'tender-icon-button'}
             type="button"
-            onClick={() => void loadFirstPage(activeQuery, statusFilter)}
+            onClick={() => void loadFirstPage(activeQuery, statusFilter, true)}
             disabled={loading}
             aria-label="Làm mới catalog"
             title="Làm mới danh sách sản phẩm"

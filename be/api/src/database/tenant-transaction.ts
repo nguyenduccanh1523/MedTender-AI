@@ -40,7 +40,7 @@ export function withTenantTransaction<T>(
       await tx.$queryRaw`SELECT set_config('app.org_id', ${organizationId}, true)`
       return operation(tx, membership.role)
     },
-    { timeout: 30000, maxWait: 10000 },
+    { timeout: 45000, maxWait: 20000 },
   )
 }
 
@@ -64,6 +64,6 @@ export function withTenantWorkspaceTransaction<T>(
       await tx.$queryRaw`SELECT set_config('app.org_id', ${organization.id}, true)`
       return operation(tx, organization.id, membership.role)
     },
-    { timeout: 30000, maxWait: 10000 },
+    { timeout: 45000, maxWait: 20000 },
   )
 }

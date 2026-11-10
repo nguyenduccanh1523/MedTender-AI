@@ -32,8 +32,12 @@ export function MarketingHeader() {
 
   useEffect(() => {
     const cached = readCachedUser()
-    inMemoryCachedUser = cached || undefined
-    setSessionUser(cached || undefined)
+    if (cached) {
+      inMemoryCachedUser = cached
+      queueMicrotask(() => {
+        setSessionUser(cached)
+      })
+    }
   }, [])
 
   return (

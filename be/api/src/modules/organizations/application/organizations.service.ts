@@ -8,6 +8,7 @@ import {
 } from '@nestjs/common'
 
 import { DatabaseService } from '../../../database/database.service'
+import { CacheService } from '../../cache/cache.service'
 import {
   MembershipRole,
   MembershipStatus,
@@ -72,7 +73,16 @@ function parseGovernanceSettings(raw: unknown): OrganizationGovernanceSettingsDt
 
 @Injectable()
 export class OrganizationsService {
-  constructor(private readonly database: DatabaseService) {}
+  constructor(
+    private readonly database: DatabaseService,
+    private readonly cache?: CacheService,
+  ) {}
+
+  async invalidateWorkspaceCache(slugOrId: string) {
+    if (this.cache) {
+      await this.cache.invalidatePrefix(`org:${slugOrId}`)
+    }
+  }
 
   async list(userId: string) {
     return this.database.db.$transaction(async (tx) => {
@@ -133,44 +143,41 @@ export class OrganizationsService {
   }
 
   async activity(userId: string, slug: string): Promise<WorkspaceActivityDto> {
-    return this.withWorkspace(userId, slug, async (tx, organizationId, role) => {
+    const cacheKey = `org:${slug}:activity:${userId}`
+    if (this.cache) {
+      const cached = await this.cache.get<WorkspaceActivityDto>(cacheKey)
+      if (cached) return cached
+    }
+
+    const result = await this.withWorkspace(userId, slug, async (tx, organizationId, role) => {
       const canSeeTeam = role === 'OWNER' || role === 'ADMIN'
-      const [
-        tenders,
-        lotsCount,
-        itemsCount,
-        products,
-        membersCount,
-        pendingInvitationsCount,
-        auditRows,
-        tendersCount,
-        productsCount,
-      ] = await Promise.all([
-        tx.tender.findMany({
-          where: { organizationId },
-          orderBy: [{ updatedAt: 'desc' }, { createdAt: 'desc' }],
-          take: 15,
-          include: {
-            _count: { select: { lots: true } },
-            lots: { select: { _count: { select: { items: true } } } },
+      const tenders = await tx.tender.findMany({
+        where: { organizationId },
+        orderBy: [{ updatedAt: 'desc' }, { createdAt: 'desc' }],
+        take: 15,
+        include: {
+          _count: { select: { lots: true } },
+          lots: { select: { _count: { select: { items: true } } } },
+        },
+      })
+      const lotsCount = await tx.tenderLot.count({ where: { organizationId } })
+      const itemsCount = await tx.tenderItem.count({ where: { organizationId } })
+      const products = await tx.product.findMany({
+        where: { organizationId },
+        orderBy: [{ updatedAt: 'desc' }, { createdAt: 'desc' }],
+        take: 25,
+        include: {
+          versions: {
+            orderBy: { versionNumber: 'desc' },
+            include: { specifications: true },
           },
-        }),
-        tx.tenderLot.count({ where: { organizationId } }),
-        tx.tenderItem.count({ where: { organizationId } }),
-        tx.product.findMany({
-          where: { organizationId },
-          orderBy: [{ updatedAt: 'desc' }, { createdAt: 'desc' }],
-          take: 25,
-          include: {
-            versions: {
-              orderBy: { versionNumber: 'desc' },
-              include: { specifications: true },
-            },
-          },
-        }),
-        canSeeTeam ? tx.organizationMembership.count({ where: { organizationId, status: 'ACTIVE' } }) : Promise.resolve(null),
-        canSeeTeam
-          ? tx.organizationInvitation.count({
+        },
+      })
+      const membersCount = canSeeTeam
+        ? await tx.organizationMembership.count({ where: { organizationId, status: 'ACTIVE' } })
+        : null
+      const pendingInvitationsCount = canSeeTeam
+        ? await tx.organizationInvitation.count({
             where: {
               organizationId,
               acceptedAt: null,
@@ -178,16 +185,15 @@ export class OrganizationsService {
               expiresAt: { gt: new Date() },
             },
           })
-          : Promise.resolve(null),
-        tx.tenderAuditLog.findMany({
-          where: { organizationId },
-          include: { actor: { select: { displayName: true } } },
-          orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
-          take: 100,
-        }),
-        tx.tender.count({ where: { organizationId } }),
-        tx.product.count({ where: { organizationId, status: 'ACTIVE' } }),
-      ])
+        : null
+      const auditRows = await tx.tenderAuditLog.findMany({
+        where: { organizationId },
+        include: { actor: { select: { displayName: true } } },
+        orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+        take: 100,
+      })
+      const tendersCount = await tx.tender.count({ where: { organizationId } })
+      const productsCount = await tx.product.count({ where: { organizationId, status: 'ACTIVE' } })
 
       let publishedVersionsCount = 0
       let draftVersionsCount = 0
@@ -439,44 +445,53 @@ export class OrganizationsService {
         timeline,
       }
     })
+
+    if (this.cache) {
+      await this.cache.set(cacheKey, result, 30)
+    }
+    return result
   }
 
   async governance(userId: string, slug: string): Promise<OrganizationGovernanceDto> {
-    return this.withWorkspace(userId, slug, async (tx, organizationId, role) => {
+    const cacheKey = `org:${slug}:governance`
+    if (this.cache) {
+      const cached = await this.cache.get<OrganizationGovernanceDto>(cacheKey)
+      if (cached) return cached
+    }
+
+    const result = await this.withWorkspace(userId, slug, async (tx, organizationId, role) => {
       if (role !== 'OWNER') {
         throw new ForbiddenException(
           'Chỉ Chủ sở hữu tổ chức (OWNER) mới có quyền truy cập Quản trị tổ chức.',
         )
       }
-      const [org, memberships, auditRows] = await Promise.all([
-        tx.organization.findUniqueOrThrow({
-          where: { id: organizationId },
-          select: {
-            id: true,
-            slug: true,
-            name: true,
-            status: true,
-            settings: true,
-            createdAt: true,
-          },
-        }),
-        tx.organizationMembership.findMany({
-          where: { organizationId },
-          select: {
-            userId: true,
-            role: true,
-            status: true,
-            user: { select: { displayName: true } },
-          },
-          orderBy: [{ joinedAt: 'asc' }, { id: 'asc' }],
-        }),
-        tx.tenderAuditLog.findMany({
-          where: { organizationId },
-          include: { actor: { select: { displayName: true } } },
-          orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
-          take: 25,
-        }),
-      ])
+      const org = await tx.organization.findUniqueOrThrow({
+        where: { id: organizationId },
+        select: {
+          id: true,
+          slug: true,
+          name: true,
+          status: true,
+          settings: true,
+          createdAt: true,
+        },
+      })
+      const memberships = await tx.organizationMembership.findMany({
+        where: { organizationId },
+        select: {
+          userId: true,
+          role: true,
+          status: true,
+          user: { select: { displayName: true } },
+        },
+        orderBy: [{ joinedAt: 'asc' }, { id: 'asc' }],
+      })
+      const auditRows = await tx.tenderAuditLog.findMany({
+        where: { organizationId },
+        include: { actor: { select: { displayName: true } } },
+        orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+        take: 25,
+      })
 
       return {
         id: org.id,
@@ -501,6 +516,11 @@ export class OrganizationsService {
         })),
       }
     })
+
+    if (this.cache) {
+      await this.cache.set(cacheKey, result, 45)
+    }
+    return result
   }
 
   async updateGovernance(
@@ -597,6 +617,7 @@ export class OrganizationsService {
         },
       })
     })
+    await this.invalidateWorkspaceCache(slug)
     return this.governance(userId, slug)
   }
 
@@ -606,7 +627,7 @@ export class OrganizationsService {
     targetUserId: string,
     body: UpdateOrganizationMemberDto,
   ) {
-    return this.withWorkspace(userId, slug, async (tx, organizationId, role) => {
+    const result = await this.withWorkspace(userId, slug, async (tx, organizationId, role) => {
       if (role !== 'OWNER') {
         throw new ForbiddenException(
           'Chỉ Chủ sở hữu tổ chức (OWNER) mới có quyền thay đổi vai trò hoặc trạng thái thành viên.',
@@ -676,6 +697,8 @@ export class OrganizationsService {
         status: updated.status,
       }
     })
+    await this.invalidateWorkspaceCache(slug)
+    return result
   }
 
   async withWorkspace<T>(

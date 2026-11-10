@@ -75,7 +75,6 @@ export function DocumentsManagementView({ slug }: { slug: string }) {
       invalidateResource(consentCacheKey)
       setLoading(true)
     }
-    setError(null)
     try {
       const [docs, consent] = await Promise.all([
         force ? listDocuments(slug) : loadResource(docsCacheKey, () => listDocuments(slug)),
@@ -85,22 +84,43 @@ export function DocumentsManagementView({ slug }: { slug: string }) {
       writeResource(consentCacheKey, consent)
       setDocuments(docs)
       setConsentStatus(consent)
+      setError(null)
     } catch (err: unknown) {
-      if (!cachedDocs) {
+      if (!readResource(docsCacheKey)) {
         setError(err instanceof ApiError ? err.message : 'Không tải được danh sách tài liệu.')
       }
     } finally {
       setLoading(false)
     }
-  }, [slug, docsCacheKey, consentCacheKey, cachedDocs])
+  }, [slug, docsCacheKey, consentCacheKey])
 
   useEffect(() => {
     let active = true
-    loadData().catch(() => {})
+    Promise.all([
+      loadResource(docsCacheKey, () => listDocuments(slug)),
+      loadResource(consentCacheKey, () => getPolicyConsentStatus(slug)),
+    ])
+      .then(([docs, consent]) => {
+        if (!active) return
+        writeResource(docsCacheKey, docs)
+        writeResource(consentCacheKey, consent)
+        setDocuments(docs)
+        setConsentStatus(consent)
+        setError(null)
+      })
+      .catch((err: unknown) => {
+        if (!active) return
+        if (!readResource(docsCacheKey)) {
+          setError(err instanceof ApiError ? err.message : 'Không tải được danh sách tài liệu.')
+        }
+      })
+      .finally(() => {
+        if (active) setLoading(false)
+      })
     return () => {
       active = false
     }
-  }, [loadData])
+  }, [slug, docsCacheKey, consentCacheKey])
 
   function handleOpenUpload() {
     if (consentStatus && !consentStatus.hasConsented) {
@@ -431,7 +451,6 @@ export function DocumentsManagementView({ slug }: { slug: string }) {
             const latest = doc.latestVersion
             const isClean = latest?.scanStatus === 'CLEAN'
             const isQuarantined = latest?.scanStatus === 'QUARANTINED'
-            const isPending = latest?.scanStatus === 'PENDING' || latest?.scanStatus === 'SCANNING'
 
             const mime = latest?.mimeType?.toLowerCase() ?? ''
             const fileTypeBadge = mime.includes('pdf')

@@ -6,6 +6,7 @@ import {
   NotFoundException,
 } from '@nestjs/common'
 import { Prisma, type MembershipRole } from '../../database/generated/client'
+import { CacheService } from '../cache/cache.service'
 import { OrganizationsService } from '../organizations/application/organizations.service'
 import {
   CATALOG_MAX_SPECS_PER_VERSION,
@@ -119,7 +120,10 @@ function toVersionSummary(detail: ProductVersionDetailDto): ProductVersionSummar
 
 @Injectable()
 export class CatalogService {
-  constructor(private readonly organizations: OrganizationsService) {}
+  constructor(
+    private readonly organizations: OrganizationsService,
+    private readonly cache?: CacheService,
+  ) {}
 
   private async recordAudit(
     tx: Prisma.TransactionClient,
@@ -142,6 +146,12 @@ export class CatalogService {
         details: (params.details ?? {}) as Prisma.InputJsonValue,
       },
     })
+    if (this.cache) {
+      await this.cache.invalidatePrefix('catalog:')
+    }
+    if (typeof this.organizations.invalidateWorkspaceCache === 'function') {
+      await this.organizations.invalidateWorkspaceCache(params.organizationId)
+    }
   }
 
   private async refreshVersionFingerprint(
@@ -168,7 +178,17 @@ export class CatalogService {
 
   async list(userId: string, slug: string, rawQuery?: Record<string, unknown>) {
     const parsed = parseCatalogListQuery(rawQuery)
-    return this.organizations.withWorkspace(userId, slug, async (tx, organizationId, role) => {
+    const cacheKey = `catalog:${slug}:${userId}:${JSON.stringify(rawQuery || {})}`
+    if (this.cache) {
+      const cached = await this.cache.get<{
+        items: ProductSummaryDto[]
+        nextCursor: string | null
+        total: number
+      }>(cacheKey)
+      if (cached) return cached
+    }
+
+    const result = await this.organizations.withWorkspace(userId, slug, async (tx, organizationId, role) => {
       const canSeeDrafts = catalogWriters.has(role)
       const versionWhere: Prisma.ProductVersionWhereInput | undefined = canSeeDrafts
         ? undefined
@@ -263,23 +283,21 @@ export class CatalogService {
         }
         : baseWhere
 
-      const [rows, total] = await Promise.all([
-        tx.product.findMany({
-          where,
-          include: {
-            versions: {
-              where: versionWhere,
-              orderBy: { versionNumber: 'desc' },
-              include: {
-                specifications: { orderBy: [{ specKey: 'asc' }, { createdAt: 'asc' }] },
-              },
+      const rows = await tx.product.findMany({
+        where,
+        include: {
+          versions: {
+            where: versionWhere,
+            orderBy: { versionNumber: 'desc' },
+            include: {
+              specifications: { orderBy: [{ specKey: 'asc' }, { createdAt: 'asc' }] },
             },
           },
-          orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
-          take: parsed.limit + 1,
-        }),
-        tx.product.count({ where: baseWhere }),
-      ])
+        },
+        orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+        take: parsed.limit + 1,
+      })
+      const total = await tx.product.count({ where: baseWhere })
 
       const hasMore = rows.length > parsed.limit
       const sliced = hasMore ? rows.slice(0, parsed.limit) : rows
@@ -289,6 +307,11 @@ export class CatalogService {
         hasMore && last ? encodeCatalogCursor({ createdAt: last.createdAt, id: last.id }) : null
       return { items, nextCursor, total }
     })
+
+    if (this.cache) {
+      await this.cache.set(cacheKey, result, 30)
+    }
+    return result
   }
 
   async create(userId: string, slug: string, body: CreateProductDto): Promise<ProductDetailDto> {

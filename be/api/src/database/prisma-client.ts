@@ -13,8 +13,23 @@ export function createPrismaClient(value = process.env.DATABASE_URL, poolSize?: 
   const schema = url.searchParams.get('schema') ?? 'public'
   url.searchParams.delete('schema')
   const adapter = new PrismaPg(
-    { connectionString: url.href, connectionTimeoutMillis: 5_000, max: poolSize },
-    { schema },
+    {
+      connectionString: url.href,
+      connectionTimeoutMillis: 15_000,
+      idleTimeoutMillis: 300_000,
+      max: poolSize ?? 10,
+      keepAlive: true,
+      keepAliveInitialDelayMillis: 5_000,
+    },
+    {
+      schema,
+      onPoolError: (err) => {
+        console.warn('[PrismaPg Pool] Idle pool connection reset:', err.message)
+      },
+      onConnectionError: (err) => {
+        console.warn('[PrismaPg Connection] Connection reset:', err.message)
+      },
+    },
   )
   return new PrismaClient({ adapter })
 }
